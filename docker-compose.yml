@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  app:
+    build: 
+      dockerfile: Dockerfile
+      context: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./:/app:delegated
+    depends_on:
+      - db
+    networks:
+        - go-networks
+    command: /bin/sh -c "go mod download && go build -o main ./cmd/main.go && ./main"
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: '${DB_NAME}'
+      MYSQL_USER: '${DB_USER}'
+      MYSQL_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - go_mysql_data:/var/lib/mysql
+    networks:
+        - go-networks
+
+  adminer:
+      image: adminer:latest
+      ports:
+          - '${ADMINER_PORT:-8081}:8080'
+      networks:
+          - go-networks
+      depends_on:
+          - db
+
+volumes:
+  go_mysql_data:
+    driver: local
+
+networks:
+    go-networks:
+      driver: bridge
