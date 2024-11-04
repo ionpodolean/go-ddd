@@ -3,7 +3,7 @@ package presentation
 
 import (
 	"go-ddd/internal/application"
-	"go-ddd/internal/domain"
+	"go-ddd/internal/domain/entity"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +18,7 @@ func NewUserHandler(service *application.UserService) *UserHandler {
 }
 
 func (h *UserHandler) RegisterUser(c *gin.Context) {
-	var user domain.User
+	var user entity.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

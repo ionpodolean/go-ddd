@@ -5,19 +5,19 @@ driver=mysql
 run: build
 
 build:
-	@docker compose run --rm app go build -o cmd/server/main.go .
+	@docker compose exec app go build -o ./cmd/server/main.go .
 
 seed:
-	@docker compose run --rm app go run cmd/seed/main.go
+	@docker compose run app go run cmd/seed/main.go
 
 db-status:
-	@docker compose run --rm app sh -c 'GOOSE_DRIVER="$(driver)" GOOSE_DBSTRING="$(dsn)" goose -dir="$(migrationPath)" status'
+	@docker compose run app sh -c 'GOOSE_DRIVER="$(driver)" GOOSE_DBSTRING="$(dsn)" goose -dir="$(migrationPath)" status'
 
 up:
-	@docker compose run --rm app sh -c 'GOOSE_DRIVER="$(driver)" GOOSE_DBSTRING="$(dsn)" goose -dir="$(migrationPath)" up'
+	@docker compose run app sh -c 'GOOSE_DRIVER="$(driver)" GOOSE_DBSTRING="$(dsn)" goose -dir="$(migrationPath)" up'
 
 down:
-	@docker compose run --rm app sh -c 'GOOSE_DRIVER="$(driver)" GOOSE_DBSTRING="$(dsn)" goose -dir="$(migrationPath)" down'
+	@docker compose run app sh -c 'GOOSE_DRIVER="$(driver)" GOOSE_DBSTRING="$(dsn)" goose -dir="$(migrationPath)" down'
 
 reset:
-	@docker compose run --rm app sh -c 'GOOSE_DRIVER="$(driver)" GOOSE_DBSTRING="$(dsn)" goose -dir="$(migrationPath)" reset'
+	@docker compose run app sh -c 'GOOSE_DRIVER="$(driver)" GOOSE_DBSTRING="$(dsn)" goose -dir="$(migrationPath)" reset'
