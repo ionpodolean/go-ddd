@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -16,18 +15,41 @@ type DBConfig struct {
 }
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file")
-	}
+	// Try loading .env file if available, ignore error if missing (e.g. in docker environment)
+	_ = godotenv.Load()
 }
 
 func GetDatabaseConfig() DBConfig {
+	host := os.Getenv("DB_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+
+	user := os.Getenv("DB_USER")
+	if user == "" {
+		user = "user"
+	}
+
+	password := os.Getenv("DB_PASSWORD")
+	if password == "" {
+		password = "password"
+	}
+
+	name := os.Getenv("DB_NAME")
+	if name == "" {
+		name = "data"
+	}
+
+	port := os.Getenv("DB_PORT")
+	if port == "" {
+		port = "3306"
+	}
+
 	return DBConfig{
-		Host:     os.Getenv("DB_HOST"),
-		User:     os.Getenv("DB_USER"),
-		Password: os.Getenv("DB_PASSWORD"),
-		Name:     os.Getenv("DB_NAME"),
-		Port:     os.Getenv("DB_PORT"),
+		Host:     host,
+		User:     user,
+		Password: password,
+		Name:     name,
+		Port:     port,
 	}
 }

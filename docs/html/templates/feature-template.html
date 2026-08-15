@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feature Module Title - Go DDD Docs</title>
+  <link rel="stylesheet" href="/docs/assets/docs.css">
+</head>
+<body>
+  <header class="docs-header">
+    <a href="/docs" class="docs-brand">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <span>go-ddd Docs</span>
+    </a>
+    <nav class="docs-nav">
+      <a href="/docs" >Home</a>
+      <a href="/docs?page=onboarding">Onboarding</a>
+      <a href="/docs?page=architecture">Architecture</a>
+      <a href="/docs?page=user-module">User Module</a>
+      <a href="/swagger/" target="_blank">Swagger UI ↗</a>
+    </nav>
+  </header>
+
+  <div class="docs-container">
+    <aside class="docs-sidebar">
+      <h4>Core Docs</h4>
+      <ul>
+        <li><a href="/docs?page=onboarding">Onboarding Guide</a></li>
+        <li><a href="/docs?page=architecture">Architecture Reference</a></li>
+      </ul>
+      <h4>Guides</h4>
+      <ul>
+        <li><a href="/docs?page=external-client-integration">Client Integration</a></li>
+        <li><a href="/docs?page=error-builder">Error Handling</a></li>
+      </ul>
+      <h4>Modules</h4>
+      <ul>
+        <li><a href="/docs?page=user-module">User Module</a></li>
+      </ul>
+      <h4>Templates</h4>
+      <ul>
+        <li><a href="/docs?page=feature-template">Feature Template</a></li>
+        <li><a href="/docs?page=guide-template">Guide Template</a></li>
+        <li><a href="/docs?page=swagger-description-template">Swagger Template</a></li>
+      </ul>
+    </aside>
+
+    <main class="docs-main">
+      <a class="back-link" href="/docs">← Back to Documentation Home</a>
+
+      <div class="toc-box">
+  <div class="toc-title">Table of Contents</div>
+  <ul class="toc-list">
+    <li><a href="#related-documentation">Related Documentation</a></li>
+    <li><a href="#section-checklist">Section Checklist</a></li>
+    <li><a href="#module-overview">Module Overview</a></li>
+    <li><a href="#key-domain-structs">&nbsp;&nbsp;↳ Key Domain Structs</a></li>
+    <li><a href="#primary-code-paths">Primary Code Paths</a></li>
+    <li><a href="#risk-areas-security-audit">Risk Areas &amp; Security Audit</a></li>
+  </ul>
+</div>
+
+      <h1>Feature Module Title</h1>
+<p>&lt;!-- metadata</p>
+<p>title: Feature Module Title</p>
+<p>category: Modules</p>
+<p>status: draft | active | deprecated</p>
+<p>last_updated: YYYY-MM-DD</p>
+<p>owner: Team Name</p>
+<p>--&gt;</p>
+<p>Short 1-2 sentence description of the module and its primary responsibility in the application.</p>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+  <li><a href="/docs?page=architecture">Architecture Reference</a></li>
+  <li><a href="/docs?page=onboarding">Developer Onboarding Guide</a></li>
+</ul>
+<hr>
+<h2 id="section-checklist">Section Checklist</h2>
+<ul>
+  <li>[ ] Module Overview &amp; Key Domain Entities</li>
+  <li>[ ] Primary Code Paths documented with <code>&lt;!-- covers: ... --&gt;</code> markers</li>
+  <li>[ ] Cross-Cutting Concerns &amp; Security Audit</li>
+  <li>[ ] Data Persistence Schema &amp; Migrations</li>
+</ul>
+<hr>
+<h2 id="module-overview">Module Overview</h2>
+<div class="doc-comment">&lt;!-- covers: internal/domain/{feature}/** --&gt;</div>
+<p>Detailed explanation of the domain model, aggregate roots, value objects, and business rules.</p>
+<h3 id="key-domain-structs">Key Domain Structs</h3>
+<pre><code class="language-go">type FeatureEntity struct {
+    ID        int64
+    Name      string
+    CreatedAt time.Time
+}
+</code></pre>
+<hr>
+<h2 id="primary-code-paths">Primary Code Paths</h2>
+<div class="doc-comment">&lt;!-- covers: internal/application/{feature}/**, internal/infrastructure/persistence/{feature}_repository.go --&gt;</div>
+<ul>
+  <li><strong>Domain</strong>: <code>internal/domain/{feature}/</code></li>
+  <li><strong>Application</strong>: <code>internal/application/{feature}/</code></li>
+  <li><strong>Infrastructure</strong>: <code>internal/infrastructure/persistence/{feature}_repository.go</code></li>
+  <li><strong>Presentation</strong>: <code>internal/presentation/http/{feature}_handler.go</code></li>
+</ul>
+<hr>
+<h2 id="risk-areas-security-audit">Risk Areas &amp; Security Audit</h2>
+<div class="doc-comment">&lt;!-- covers: internal/infrastructure/security/** --&gt;</div>
+<p>Document risk areas, performance bottlenecks, caching strategies, and security considerations.</p>
+
+    </main>
+  </div>
+
+  <footer class="docs-footer">
+    <p>&copy; 2026 go-ddd Team. Markdown-first Documentation Architecture.</p>
+  </footer>
+</body>
+</html>

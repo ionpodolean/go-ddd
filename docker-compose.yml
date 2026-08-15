@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     build: 
@@ -9,19 +7,27 @@ services:
       - "8080:8080"
     volumes:
       - ./:/app:delegated
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=${DB_USER:-user}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_NAME=${DB_NAME:-data}
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
-        - go-networks
+      - go-networks
     command: /bin/sh -c "go mod download && go build -o main ./cmd/main.go && ./main"
 
   db:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: '${DB_NAME}'
-      MYSQL_USER: '${DB_USER}'
-      MYSQL_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_DATABASE: '${DB_NAME:-data}'
+      MYSQL_USER: '${DB_USER:-user}'
+      MYSQL_PASSWORD: '${DB_PASSWORD:-password}'
       MYSQL_ALLOW_EMPTY_PASSWORD: 1
       SERVICE_TAGS: dev
       SERVICE_NAME: mysql
@@ -29,22 +35,27 @@ services:
       - "3306:3306"
     volumes:
       - go_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
     networks:
-        - go-networks
+      - go-networks
 
   adminer:
-      image: adminer:latest
-      ports:
-          - '${ADMINER_PORT:-8081}:8080'
-      networks:
-          - go-networks
-      depends_on:
-          - db
+    image: adminer:latest
+    ports:
+      - '${ADMINER_PORT:-8081}:8080'
+    networks:
+      - go-networks
+    depends_on:
+      - db
 
 volumes:
   go_mysql_data:
     driver: local
 
 networks:
-    go-networks:
-      driver: bridge
+  go-networks:
+    driver: bridge

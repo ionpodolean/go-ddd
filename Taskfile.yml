@@ -1,0 +1,77 @@
+version: '3'
+
+tasks:
+  default:
+    desc: Display available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build the server binary
+    cmds:
+      - go build -o bin/server ./cmd/main.go
+
+  run:
+    desc: Run the application directly with go run
+    cmds:
+      - go run ./cmd/main.go
+
+  test:
+    desc: Run unit and integration tests
+    cmds:
+      - go test -v -race ./...
+
+  lint:
+    desc: Run golangci-lint linter checks
+    cmds:
+      - golangci-lint run ./...
+
+  lint:fix:
+    desc: Run golangci-lint with auto-fix enabled
+    cmds:
+      - golangci-lint run --fix ./...
+
+  sqlc:
+    desc: Generate type-safe Go code from SQL queries using sqlc
+    cmds:
+      - sqlc generate
+
+  swagger:
+    desc: Generate Swagger / OpenAPI documentation
+    cmds:
+      - go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/main.go -o docs
+
+  docgen:
+    desc: Regenerate Markdown-first static HTML documentation
+    cmds:
+      - go run ./cmd/docgen/main.go
+
+  docker:up:
+    desc: Start all docker compose containers
+    cmds:
+      - docker compose up -d
+
+  docker:down:
+    desc: Stop and remove all docker compose containers
+    cmds:
+      - docker compose down
+
+  docker:logs:
+    desc: View logs from docker compose
+    cmds:
+      - docker compose logs -f
+
+  migrate:up:
+    desc: Run database migrations (Goose)
+    cmds:
+      - goose -dir ./migrations mysql "user:password@tcp(localhost:3306)/data?parseTime=true" up
+
+  migrate:down:
+    desc: Rollback database migrations (Goose)
+    cmds:
+      - goose -dir ./migrations mysql "user:password@tcp(localhost:3306)/data?parseTime=true" down
+
+  migrate:status:
+    desc: Check database migration status
+    cmds:
+      - goose -dir ./migrations mysql "user:password@tcp(localhost:3306)/data?parseTime=true" status

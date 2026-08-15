@@ -1,0 +1,104 @@
+{
+  "project_metadata": {
+    "name": "go-ddd",
+    "description": "Clean Domain-Driven Design (DDD) REST API in Go featuring User Registration, Authentication, and JWT Security.",
+    "stack": [
+      "Go 1.25",
+      "MySQL 8.0",
+      "Goose Migrations",
+      "sqlc",
+      "JWT Authentication",
+      "Docker"
+    ]
+  },
+  "core_docs": {
+    "onboarding": {
+      "doc_path": "docs/md/core/onboarding-guide.md",
+      "html_path": "docs/html/core/onboarding-guide.html",
+      "scope": "Developer onboarding, setup, local running, testing, and dev environment."
+    },
+    "architecture": {
+      "doc_path": "docs/md/core/architecture-reference.md",
+      "html_path": "docs/html/core/architecture-reference.html",
+      "scope": "Domain-Driven Design architecture, layer boundaries, dependency rule, domain entities, repositories, and handlers."
+    }
+  },
+  "guides": {
+    "external-client-integration": {
+      "doc_path": "docs/md/guides/external-client-integration-guide.md",
+      "html_path": "docs/html/guides/external-client-integration-guide.html",
+      "url_key": "external-client-integration",
+      "tags": ["integration", "rest-api", "authentication", "jwt"],
+      "audience": "External Developers, Frontend Engineers, Mobile Developers",
+      "status": "active",
+      "related": ["architecture", "user-module", "error-builder"]
+    },
+    "error-builder": {
+      "doc_path": "docs/md/guides/error-builder-guide.md",
+      "html_path": "docs/html/guides/error-builder-guide.html",
+      "url_key": "error-builder",
+      "tags": ["errors", "domain-errors", "http-response", "handling"],
+      "audience": "Backend Engineers, Contributors",
+      "status": "active",
+      "related": ["architecture", "external-client-integration"]
+    }
+  },
+  "modules": {
+    "user-module": {
+      "name": "User Management Module",
+      "description": "Handles User domain entities, registration, password hashing (bcrypt), authentication, profile queries, and JWT issuance.",
+      "aliases": ["users", "auth", "user-domain"],
+      "doc_path": "docs/md/modules/user-module.md",
+      "html_path": "docs/html/modules/user-module.html",
+      "status": "active",
+      "primary_paths": [
+        "internal/domain/user/**",
+        "internal/application/user/**",
+        "internal/infrastructure/persistence/mysql_user_repository.go",
+        "internal/infrastructure/security/jwt.go",
+        "internal/presentation/http/user_handler.go"
+      ],
+      "cross_cutting_paths": [
+        "internal/presentation/http/middleware.go",
+        "internal/presentation/http/router.go"
+      ],
+      "related_modules": [],
+      "affects": ["auth-flow", "user-profile", "database-schema"],
+      "risk_areas": ["Password hashing security", "JWT key secret management", "Email unique constraints"]
+    }
+  },
+  "templates": {
+    "feature-template": {
+      "doc_path": "docs/md/templates/feature-template.md",
+      "html_path": "docs/html/templates/feature-template.html",
+      "scope": "Standardized template for module & domain feature documentation."
+    },
+    "guide-template": {
+      "doc_path": "docs/md/templates/guide-template.md",
+      "html_path": "docs/html/templates/guide-template.html",
+      "scope": "Standardized template for deep-dive technical guides."
+    },
+    "swagger-description-template": {
+      "doc_path": "docs/md/templates/swagger-description-template.md",
+      "html_path": "docs/html/templates/swagger-description-template.html",
+      "scope": "Standardized template for Swagger & OpenAPI route annotations."
+    }
+  },
+  "topic_index": {
+    "onboarding": ["onboarding"],
+    "setup": ["onboarding"],
+    "docker": ["onboarding"],
+    "migrations": ["onboarding", "architecture"],
+    "architecture": ["architecture"],
+    "ddd": ["architecture"],
+    "layers": ["architecture"],
+    "authentication": ["external-client-integration", "user-module"],
+    "jwt": ["external-client-integration", "user-module"],
+    "login": ["external-client-integration", "user-module"],
+    "registration": ["external-client-integration", "user-module"],
+    "errors": ["error-builder"],
+    "error-handling": ["error-builder"],
+    "user": ["user-module"],
+    "templates": ["feature-template", "guide-template", "swagger-description-template"]
+  }
+}

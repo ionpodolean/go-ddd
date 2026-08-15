@@ -5,10 +5,7 @@ driver=mysql
 run: build
 
 build:
-	@docker compose exec app go build -o ./cmd/server/main.go .
-
-seed:
-	@docker compose run app go run cmd/seed/main.go
+	@docker compose exec app go build -o main ./cmd/main.go
 
 db-status:
 	@docker compose run app sh -c 'GOOSE_DRIVER="$(driver)" GOOSE_DBSTRING="$(dsn)" goose -dir="$(migrationPath)" status'

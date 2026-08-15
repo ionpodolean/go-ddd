@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture Reference - Go DDD Docs</title>
+  <link rel="stylesheet" href="/docs/assets/docs.css">
+</head>
+<body>
+  <header class="docs-header">
+    <a href="/docs" class="docs-brand">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <span>go-ddd Docs</span>
+    </a>
+    <nav class="docs-nav">
+      <a href="/docs" >Home</a>
+      <a href="/docs?page=onboarding">Onboarding</a>
+      <a href="/docs?page=architecture">Architecture</a>
+      <a href="/docs?page=user-module">User Module</a>
+      <a href="/swagger/" target="_blank">Swagger UI ↗</a>
+    </nav>
+  </header>
+
+  <div class="docs-container">
+    <aside class="docs-sidebar">
+      <h4>Core Docs</h4>
+      <ul>
+        <li><a href="/docs?page=onboarding">Onboarding Guide</a></li>
+        <li><a href="/docs?page=architecture">Architecture Reference</a></li>
+      </ul>
+      <h4>Guides</h4>
+      <ul>
+        <li><a href="/docs?page=external-client-integration">Client Integration</a></li>
+        <li><a href="/docs?page=error-builder">Error Handling</a></li>
+      </ul>
+      <h4>Modules</h4>
+      <ul>
+        <li><a href="/docs?page=user-module">User Module</a></li>
+      </ul>
+      <h4>Templates</h4>
+      <ul>
+        <li><a href="/docs?page=feature-template">Feature Template</a></li>
+        <li><a href="/docs?page=guide-template">Guide Template</a></li>
+        <li><a href="/docs?page=swagger-description-template">Swagger Template</a></li>
+      </ul>
+    </aside>
+
+    <main class="docs-main">
+      <a class="back-link" href="/docs">← Back to Documentation Home</a>
+
+      <div class="toc-box">
+  <div class="toc-title">Table of Contents</div>
+  <ul class="toc-list">
+    <li><a href="#related-documentation">Related Documentation</a></li>
+    <li><a href="#high-level-architectural-layers">High-Level Architectural Layers</a></li>
+    <li><a href="#layer-breakdown">Layer Breakdown</a></li>
+    <li><a href="#1-domain-layer-internaldomain">&nbsp;&nbsp;↳ 1. Domain Layer (`internal/domain/`)</a></li>
+    <li><a href="#2-application-layer-internalapplication">&nbsp;&nbsp;↳ 2. Application Layer (`internal/application/`)</a></li>
+    <li><a href="#3-infrastructure-layer-internalinfrastructure">&nbsp;&nbsp;↳ 3. Infrastructure Layer (`internal/infrastructure/`)</a></li>
+    <li><a href="#4-presentation-layer-internalpresentationhttp">&nbsp;&nbsp;↳ 4. Presentation Layer (`internal/presentation/http/`)</a></li>
+    <li><a href="#directory-layout-summary">Directory Layout Summary</a></li>
+  </ul>
+</div>
+
+      <h1>Architecture Reference</h1>
+<p>&lt;!-- metadata</p>
+<p>title: Architecture Reference</p>
+<p>category: Core</p>
+<p>status: active</p>
+<p>last_updated: 2026-08-15</p>
+<p>--&gt;</p>
+<p>This document outlines the Domain-Driven Design (DDD) architectural layers, code structure, and design principles implemented in <strong>go-ddd</strong>.</p>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+  <li><a href="/docs?page=onboarding">Developer Onboarding Guide</a></li>
+  <li><a href="/docs?page=user-module">User Management Module</a></li>
+</ul>
+<hr>
+<h2 id="high-level-architectural-layers">High-Level Architectural Layers</h2>
+<div class="doc-comment">&lt;!-- covers: internal/domain/**, internal/application/**, internal/infrastructure/**, internal/presentation/** --&gt;</div>
+<p>The application adheres strictly to the <strong>Dependency Rule</strong>: inner layers (Domain) do not depend on outer layers (Infrastructure, Presentation). Dependencies point inward.</p>
+<pre><code class="language-">+-------------------------------------------------------------------+
+|                       PRESENTATION LAYER                          |
+|  (HTTP Handlers, Router, Middleware, JSON Serialization)          |
++-------------------------------------------------------------------+
+                                  |
+                                  v
++-------------------------------------------------------------------+
+|                       APPLICATION LAYER                           |
+|  (Use Cases, Application Services, DTOs, Orchestration)           |
++-------------------------------------------------------------------+
+                                  |
+                                  v
++-------------------------------------------------------------------+
+|                         DOMAIN LAYER                              |
+|  (Entities, Aggregates, Value Objects, Domain Repository Interfaces)|
++-------------------------------------------------------------------+
+                                  ^
+                                  | (implements)
++-------------------------------------------------------------------+
+|                     INFRASTRUCTURE LAYER                          |
+|  (MySQL Persistence, Goose Migrations, JWT Security, SQLC)        |
++-------------------------------------------------------------------+
+</code></pre>
+<hr>
+<h2 id="layer-breakdown">Layer Breakdown</h2>
+<h3 id="1-domain-layer-internaldomain">1. Domain Layer (<code>internal/domain/</code>)</h3>
+<ul>
+  <li>Contains domain entities (e.g. <code>User</code>), domain logic, validation, and repository interface definitions.</li>
+  <li>Zero external dependencies. Pure Go logic.</li>
+</ul>
+<h3 id="2-application-layer-internalapplication">2. Application Layer (<code>internal/application/</code>)</h3>
+<ul>
+  <li>Encapsulates use cases (e.g. <code>UserService</code>).</li>
+  <li>Coordinates domain entities and infrastructure abstractions (repositories, token services).</li>
+  <li>Defines request/response DTOs.</li>
+</ul>
+<h3 id="3-infrastructure-layer-internalinfrastructure">3. Infrastructure Layer (<code>internal/infrastructure/</code>)</h3>
+<ul>
+  <li>Provides concrete implementations for domain interfaces.</li>
+  <li><code>infrastructure/persistence</code>: MySQL user repository (<code>MySQLUserRepository</code>).</li>
+  <li><code>infrastructure/security</code>: JWT token generation &amp; verification (<code>JWTService</code>).</li>
+</ul>
+<h3 id="4-presentation-layer-internalpresentationhttp">4. Presentation Layer (<code>internal/presentation/http/</code>)</h3>
+<ul>
+  <li>HTTP endpoints, router configuration, middleware (logging, recovery, auth).</li>
+  <li>Deserializes JSON requests, invokes Application Services, and formats HTTP responses.</li>
+</ul>
+<hr>
+<h2 id="directory-layout-summary">Directory Layout Summary</h2>
+<pre><code class="language-">go-ddd/
+├── cmd/
+│   ├── main.go               # Server entry point
+│   └── docgen/               # Static documentation compiler tool
+├── docs/                     # Documentation assets, MD sources, HTML outputs
+│   ├── assets/               # docs.css, manifest.json
+│   ├── md/                   # Source Markdown files
+│   └── html/                 # Generated HTML artifacts
+├── internal/
+│   ├── domain/               # Domain Entities &amp; Interfaces
+│   ├── application/          # Use Cases &amp; Application Services
+│   ├── infrastructure/       # MySQL Repositories &amp; JWT Security
+│   └── presentation/         # HTTP Handlers, Routers, Middleware
+├── migrations/               # Goose SQL migrations
+└── pkg/                      # Shared DB initialization utilities
+</code></pre>
+
+    </main>
+  </div>
+
+  <footer class="docs-footer">
+    <p>&copy; 2026 go-ddd Team. Markdown-first Documentation Architecture.</p>
+  </footer>
+</body>
+</html>

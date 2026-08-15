@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Developer Onboarding Guide - Go DDD Docs</title>
+  <link rel="stylesheet" href="/docs/assets/docs.css">
+</head>
+<body>
+  <header class="docs-header">
+    <a href="/docs" class="docs-brand">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <span>go-ddd Docs</span>
+    </a>
+    <nav class="docs-nav">
+      <a href="/docs" >Home</a>
+      <a href="/docs?page=onboarding">Onboarding</a>
+      <a href="/docs?page=architecture">Architecture</a>
+      <a href="/docs?page=user-module">User Module</a>
+      <a href="/swagger/" target="_blank">Swagger UI ↗</a>
+    </nav>
+  </header>
+
+  <div class="docs-container">
+    <aside class="docs-sidebar">
+      <h4>Core Docs</h4>
+      <ul>
+        <li><a href="/docs?page=onboarding">Onboarding Guide</a></li>
+        <li><a href="/docs?page=architecture">Architecture Reference</a></li>
+      </ul>
+      <h4>Guides</h4>
+      <ul>
+        <li><a href="/docs?page=external-client-integration">Client Integration</a></li>
+        <li><a href="/docs?page=error-builder">Error Handling</a></li>
+      </ul>
+      <h4>Modules</h4>
+      <ul>
+        <li><a href="/docs?page=user-module">User Module</a></li>
+      </ul>
+      <h4>Templates</h4>
+      <ul>
+        <li><a href="/docs?page=feature-template">Feature Template</a></li>
+        <li><a href="/docs?page=guide-template">Guide Template</a></li>
+        <li><a href="/docs?page=swagger-description-template">Swagger Template</a></li>
+      </ul>
+    </aside>
+
+    <main class="docs-main">
+      <a class="back-link" href="/docs">← Back to Documentation Home</a>
+
+      <div class="toc-box">
+  <div class="toc-title">Table of Contents</div>
+  <ul class="toc-list">
+    <li><a href="#related-documentation">Related Documentation</a></li>
+    <li><a href="#prerequisites">Prerequisites</a></li>
+    <li><a href="#quick-start-setup">Quick Start Setup</a></li>
+    <li><a href="#1-environment-configuration">&nbsp;&nbsp;↳ 1. Environment Configuration</a></li>
+    <li><a href="#2-start-mysql-container">&nbsp;&nbsp;↳ 2. Start MySQL Container</a></li>
+    <li><a href="#3-run-database-migrations">&nbsp;&nbsp;↳ 3. Run Database Migrations</a></li>
+    <li><a href="#4-run-the-api-server">&nbsp;&nbsp;↳ 4. Run the API Server</a></li>
+    <li><a href="#running-tests">Running Tests</a></li>
+    <li><a href="#useful-development-tasks">Useful Development Tasks</a></li>
+  </ul>
+</div>
+
+      <h1>Developer Onboarding Guide</h1>
+<p>&lt;!-- metadata</p>
+<p>title: Developer Onboarding Guide</p>
+<p>category: Core</p>
+<p>status: active</p>
+<p>last_updated: 2026-08-15</p>
+<p>--&gt;</p>
+<p>Welcome to the <strong>go-ddd</strong> project! This guide will walk you through setting up your local environment, running the application with Docker or Go directly, running database migrations, and running tests.</p>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+  <li><a href="/docs?page=architecture">Architecture Reference</a></li>
+  <li><a href="/docs?page=user-module">User Management Module</a></li>
+  <li><a href="/docs?page=error-builder">Error Builder Guide</a></li>
+</ul>
+<hr>
+<h2 id="prerequisites">Prerequisites</h2>
+<p>Before starting, ensure you have the following installed on your machine:</p>
+<ul>
+  <li><strong>Go</strong>: v1.25+ (<code>go version</code>)</li>
+  <li><strong>Docker &amp; Docker Compose</strong> (for MySQL database container)</li>
+  <li><strong>Goose</strong>: CLI for database migrations (<code>go install github.com/pressly/goose/v3/cmd/goose@latest</code>)</li>
+  <li><strong>Task</strong>: (Optional) Task runner (<code>brew install go-task/tap/go-task</code>)</li>
+</ul>
+<hr>
+<h2 id="quick-start-setup">Quick Start Setup</h2>
+<div class="doc-comment">&lt;!-- covers: docker-compose.yml, Makefile, Taskfile.yml, example.env --&gt;</div>
+<h3 id="1-environment-configuration">1. Environment Configuration</h3>
+<p>Copy the sample environment file <code>.env</code>:</p>
+<pre><code class="language-bash">cp example.env .env
+</code></pre>
+<p>Ensure <code>.env</code> contains:</p>
+<pre><code class="language-env">PORT=8080
+JWT_SECRET=super-secret-jwt-key
+DB_DSN=user:password@tcp(localhost:3306)/data?charset=utf8&amp;parseTime=True&amp;loc=Local
+</code></pre>
+<h3 id="2-start-mysql-container">2. Start MySQL Container</h3>
+<p>Run Docker Compose to spin up MySQL database:</p>
+<pre><code class="language-bash">docker compose up -d
+</code></pre>
+<h3 id="3-run-database-migrations">3. Run Database Migrations</h3>
+<p>Run database migrations using Goose or Task commands:</p>
+<pre><code class="language-bash">task migrate:up
+</code></pre>
+<p>Or directly with Goose:</p>
+<pre><code class="language-bash">goose -dir ./migrations mysql &#34;user:password@tcp(localhost:3306)/data?parseTime=true&#34; up
+</code></pre>
+<h3 id="4-run-the-api-server">4. Run the API Server</h3>
+<p>Start the HTTP server:</p>
+<pre><code class="language-bash">go run ./cmd/main.go
+</code></pre>
+<p>The server will start listening on port <code>:8080</code>.</p>
+<hr>
+<h2 id="running-tests">Running Tests</h2>
+<div class="doc-comment">&lt;!-- covers: internal/**/*_test.go --&gt;</div>
+<p>Run all unit and integration tests:</p>
+<pre><code class="language-bash">go test -v ./...
+</code></pre>
+<p>Run race detector tests:</p>
+<pre><code class="language-bash">task test
+</code></pre>
+<hr>
+<h2 id="useful-development-tasks">Useful Development Tasks</h2>
+<div class="doc-comment">&lt;!-- covers: Taskfile.yml --&gt;</div>
+<table>
+  <thead>
+  <tr>
+    <th>Command</th>
+    <th>Action</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td><code>task run</code></td>
+    <td>Runs <code>cmd/main.go</code> directly</td>
+  </tr>
+  <tr>
+    <td><code>task test</code></td>
+    <td>Runs tests with race detector</td>
+  </tr>
+  <tr>
+    <td><code>task lint</code></td>
+    <td>Runs <code>golangci-lint</code></td>
+  </tr>
+  <tr>
+    <td><code>task swagger</code></td>
+    <td>Regenerates Swagger docs (<code>docs/docs.go</code>)</td>
+  </tr>
+  <tr>
+    <td><code>task migrate:up</code></td>
+    <td>Applies database migrations</td>
+  </tr>
+  <tr>
+    <td><code>task docgen</code></td>
+    <td>Regenerates static HTML documentation</td>
+  </tr>
+  </tbody>
+</table>
+
+    </main>
+  </div>
+
+  <footer class="docs-footer">
+    <p>&copy; 2026 go-ddd Team. Markdown-first Documentation Architecture.</p>
+  </footer>
+</body>
+</html>

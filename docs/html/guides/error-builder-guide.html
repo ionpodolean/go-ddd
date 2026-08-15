@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error Builder &amp; Handling Guide - Go DDD Docs</title>
+  <link rel="stylesheet" href="/docs/assets/docs.css">
+</head>
+<body>
+  <header class="docs-header">
+    <a href="/docs" class="docs-brand">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <span>go-ddd Docs</span>
+    </a>
+    <nav class="docs-nav">
+      <a href="/docs" >Home</a>
+      <a href="/docs?page=onboarding">Onboarding</a>
+      <a href="/docs?page=architecture">Architecture</a>
+      <a href="/docs?page=user-module">User Module</a>
+      <a href="/swagger/" target="_blank">Swagger UI ↗</a>
+    </nav>
+  </header>
+
+  <div class="docs-container">
+    <aside class="docs-sidebar">
+      <h4>Core Docs</h4>
+      <ul>
+        <li><a href="/docs?page=onboarding">Onboarding Guide</a></li>
+        <li><a href="/docs?page=architecture">Architecture Reference</a></li>
+      </ul>
+      <h4>Guides</h4>
+      <ul>
+        <li><a href="/docs?page=external-client-integration">Client Integration</a></li>
+        <li><a href="/docs?page=error-builder">Error Handling</a></li>
+      </ul>
+      <h4>Modules</h4>
+      <ul>
+        <li><a href="/docs?page=user-module">User Module</a></li>
+      </ul>
+      <h4>Templates</h4>
+      <ul>
+        <li><a href="/docs?page=feature-template">Feature Template</a></li>
+        <li><a href="/docs?page=guide-template">Guide Template</a></li>
+        <li><a href="/docs?page=swagger-description-template">Swagger Template</a></li>
+      </ul>
+    </aside>
+
+    <main class="docs-main">
+      <a class="back-link" href="/docs">← Back to Documentation Home</a>
+
+      <div class="toc-box">
+  <div class="toc-title">Table of Contents</div>
+  <ul class="toc-list">
+    <li><a href="#related-documentation">Related Documentation</a></li>
+    <li><a href="#domain-error-definitions">Domain Error Definitions</a></li>
+    <li><a href="#http-error-response-schema">HTTP Error Response Schema</a></li>
+    <li><a href="#http-status-code-mapping">&nbsp;&nbsp;↳ HTTP Status Code Mapping</a></li>
+    <li><a href="#middleware-error-recovery">Middleware Error Recovery</a></li>
+  </ul>
+</div>
+
+      <h1>Error Builder &amp; Handling Guide</h1>
+<p>&lt;!-- metadata</p>
+<p>title: Error Builder &amp; Handling Guide</p>
+<p>category: Guides</p>
+<p>status: active</p>
+<p>last_updated: 2026-08-15</p>
+<p>--&gt;</p>
+<p>This document describes error handling conventions across domain, application, infrastructure, and presentation layers in <strong>go-ddd</strong>.</p>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+  <li><a href="/docs?page=architecture">Architecture Reference</a></li>
+  <li><a href="/docs?page=external-client-integration">External Client Integration Guide</a></li>
+</ul>
+<hr>
+<h2 id="domain-error-definitions">Domain Error Definitions</h2>
+<div class="doc-comment">&lt;!-- covers: internal/domain/user/repository.go --&gt;</div>
+<p>Domain errors are sentinel errors defined within domain packages:</p>
+<pre><code class="language-go">package user
+
+import &#34;errors&#34;
+
+var (
+    ErrUserNotFound      = errors.New(&#34;user not found&#34;)
+    ErrEmailAlreadyExists = errors.New(&#34;email already exists&#34;)
+    ErrInvalidCredentials = errors.New(&#34;invalid email or password&#34;)
+)
+</code></pre>
+<hr>
+<h2 id="http-error-response-schema">HTTP Error Response Schema</h2>
+<div class="doc-comment">&lt;!-- covers: internal/presentation/http/user_handler.go, internal/presentation/http/middleware.go --&gt;</div>
+<p>HTTP handlers map domain and infrastructure errors to standard JSON response objects:</p>
+<pre><code class="language-json">{
+  &#34;error&#34;: &#34;Human-readable error summary message&#34;,
+  &#34;code&#34;: &#34;OPTIONAL_ERROR_CODE&#34;,
+  &#34;details&#34;: null
+}
+</code></pre>
+<h3 id="http-status-code-mapping">HTTP Status Code Mapping</h3>
+<table>
+  <thead>
+  <tr>
+    <th>Domain / Scenario</th>
+    <th>HTTP Status Code</th>
+    <th>Response Body Message</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td>Duplicate email registration</td>
+    <td><code>409 Conflict</code></td>
+    <td><code>Email already exists</code></td>
+  </tr>
+  <tr>
+    <td>Invalid credentials on login</td>
+    <td><code>401 Unauthorized</code></td>
+    <td><code>Invalid email or password</code></td>
+  </tr>
+  <tr>
+    <td>Missing or invalid JWT header</td>
+    <td><code>401 Unauthorized</code></td>
+    <td><code>Unauthorized</code></td>
+  </tr>
+  <tr>
+    <td>User resource not found</td>
+    <td><code>404 Not Found</code></td>
+    <td><code>User not found</code></td>
+  </tr>
+  <tr>
+    <td>Internal DB query failure</td>
+    <td><code>500 Internal Server Error</code></td>
+    <td><code>Internal server error</code></td>
+  </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="middleware-error-recovery">Middleware Error Recovery</h2>
+<p>The <code>RecoveryMiddleware</code> catches any uncaught runtime panics in HTTP request handlers, logs the stack trace, and returns a <code>500 Internal Server Error</code> response.</p>
+
+    </main>
+  </div>
+
+  <footer class="docs-footer">
+    <p>&copy; 2026 go-ddd Team. Markdown-first Documentation Architecture.</p>
+  </footer>
+</body>
+</html>

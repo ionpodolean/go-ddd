@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management Module - Go DDD Docs</title>
+  <link rel="stylesheet" href="/docs/assets/docs.css">
+</head>
+<body>
+  <header class="docs-header">
+    <a href="/docs" class="docs-brand">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <span>go-ddd Docs</span>
+    </a>
+    <nav class="docs-nav">
+      <a href="/docs" >Home</a>
+      <a href="/docs?page=onboarding">Onboarding</a>
+      <a href="/docs?page=architecture">Architecture</a>
+      <a href="/docs?page=user-module">User Module</a>
+      <a href="/swagger/" target="_blank">Swagger UI ↗</a>
+    </nav>
+  </header>
+
+  <div class="docs-container">
+    <aside class="docs-sidebar">
+      <h4>Core Docs</h4>
+      <ul>
+        <li><a href="/docs?page=onboarding">Onboarding Guide</a></li>
+        <li><a href="/docs?page=architecture">Architecture Reference</a></li>
+      </ul>
+      <h4>Guides</h4>
+      <ul>
+        <li><a href="/docs?page=external-client-integration">Client Integration</a></li>
+        <li><a href="/docs?page=error-builder">Error Handling</a></li>
+      </ul>
+      <h4>Modules</h4>
+      <ul>
+        <li><a href="/docs?page=user-module">User Module</a></li>
+      </ul>
+      <h4>Templates</h4>
+      <ul>
+        <li><a href="/docs?page=feature-template">Feature Template</a></li>
+        <li><a href="/docs?page=guide-template">Guide Template</a></li>
+        <li><a href="/docs?page=swagger-description-template">Swagger Template</a></li>
+      </ul>
+    </aside>
+
+    <main class="docs-main">
+      <a class="back-link" href="/docs">← Back to Documentation Home</a>
+
+      <div class="toc-box">
+  <div class="toc-title">Table of Contents</div>
+  <ul class="toc-list">
+    <li><a href="#related-documentation">Related Documentation</a></li>
+    <li><a href="#module-overview">Module Overview</a></li>
+    <li><a href="#primary-code-paths">Primary Code Paths</a></li>
+    <li><a href="#security-risk-areas">Security &amp; Risk Areas</a></li>
+  </ul>
+</div>
+
+      <h1>User Management Module</h1>
+<p>&lt;!-- metadata</p>
+<p>title: User Management Module</p>
+<p>category: Modules</p>
+<p>status: active</p>
+<p>last_updated: 2026-08-15</p>
+<p>--&gt;</p>
+<p>The User Management module governs user registration, password security, authentication credentials, profile retrieval, and JWT issuance.</p>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+  <li><a href="/docs?page=architecture">Architecture Reference</a></li>
+  <li><a href="/docs?page=external-client-integration">External Client Integration Guide</a></li>
+  <li><a href="/docs?page=error-builder">Error Builder Guide</a></li>
+</ul>
+<hr>
+<h2 id="module-overview">Module Overview</h2>
+<div class="doc-comment">&lt;!-- covers: internal/domain/user/**, internal/application/user/**, internal/infrastructure/persistence/mysql_user_repository.go --&gt;</div>
+<table>
+  <thead>
+  <tr>
+    <th>Aspect</th>
+    <th>Details</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td><strong>Domain Package</strong></td>
+    <td><code>internal/domain/user</code></td>
+  </tr>
+  <tr>
+    <td><strong>Application Package</strong></td>
+    <td><code>internal/application/user</code></td>
+  </tr>
+  <tr>
+    <td><strong>Persistence</strong></td>
+    <td><code>internal/infrastructure/persistence/mysql_user_repository.go</code></td>
+  </tr>
+  <tr>
+    <td><strong>Security</strong></td>
+    <td><code>internal/infrastructure/security/jwt.go</code></td>
+  </tr>
+  <tr>
+    <td><strong>HTTP Handlers</strong></td>
+    <td><code>internal/presentation/http/user_handler.go</code></td>
+  </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="primary-code-paths">Primary Code Paths</h2>
+<ul>
+  <li><strong>Domain Entity &amp; Repository Interface</strong>:</li>
+  <li><code>internal/domain/user/user.go</code></li>
+  <li><code>internal/domain/user/repository.go</code></li>
+  <li><strong>Application Service</strong>:</li>
+  <li><code>internal/application/user/service.go</code></li>
+  <li><strong>Infrastructure Implementations</strong>:</li>
+  <li><code>internal/infrastructure/persistence/mysql_user_repository.go</code></li>
+  <li><code>internal/infrastructure/security/jwt.go</code></li>
+  <li><strong>HTTP Presentation</strong>:</li>
+  <li><code>internal/presentation/http/user_handler.go</code></li>
+</ul>
+<hr>
+<h2 id="security-risk-areas">Security &amp; Risk Areas</h2>
+<ul>
+  <li><strong>Password Hashing</strong>: Uses <code>golang.org/x/crypto/bcrypt</code> for secure salt &amp; hash generation.</li>
+  <li><strong>JWT Key</strong>: <code>JWT_SECRET</code> must be set via environment variables in production environments.</li>
+  <li><strong>Database Indexing</strong>: Unique index on <code>users.email</code> column in MySQL to enforce email uniqueness at database level.</li>
+</ul>
+
+    </main>
+  </div>
+
+  <footer class="docs-footer">
+    <p>&copy; 2026 go-ddd Team. Markdown-first Documentation Architecture.</p>
+  </footer>
+</body>
+</html>

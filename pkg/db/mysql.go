@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"go-ddd/config"
 
@@ -12,20 +13,27 @@ import (
 
 func InitDB() *sql.DB {
 	DBConfig := config.GetDatabaseConfig()
-	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", DBConfig.User, DBConfig.Password, DBConfig.Host, DBConfig.Port, DBConfig.Name)
+	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", DBConfig.User, DBConfig.Password, DBConfig.Host, DBConfig.Port, DBConfig.Name)
 
-	fmt.Println(connectionString)
+	log.Printf("Connecting to database at %s:%s...", DBConfig.Host, DBConfig.Port)
 
-	DB, err := sql.Open("mysql", connectionString)
+	var DB *sql.DB
+	var err error
 
-	if err != nil {
-		panic(fmt.Errorf("sql.Open: %w", err))
+	maxRetries := 15
+	for i := 1; i <= maxRetries; i++ {
+		DB, err = sql.Open("mysql", connectionString)
+		if err == nil {
+			err = DB.Ping()
+			if err == nil {
+				log.Println("Database connection established successfully")
+				return DB
+			}
+		}
+
+		log.Printf("Waiting for database to be ready (attempt %d/%d): %v", i, maxRetries, err)
+		time.Sleep(2 * time.Second)
 	}
 
-	if err = DB.Ping(); err != nil {
-		panic(fmt.Errorf("DB.Ping: %w", err))
-	}
-
-	log.Println("Database connection established")
-	return DB
+	panic(fmt.Errorf("failed to connect to database at %s:%s after %d attempts: %w", DBConfig.Host, DBConfig.Port, maxRetries, err))
 }

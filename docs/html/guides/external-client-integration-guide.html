@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>External Client Integration Guide - Go DDD Docs</title>
+  <link rel="stylesheet" href="/docs/assets/docs.css">
+</head>
+<body>
+  <header class="docs-header">
+    <a href="/docs" class="docs-brand">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <span>go-ddd Docs</span>
+    </a>
+    <nav class="docs-nav">
+      <a href="/docs" >Home</a>
+      <a href="/docs?page=onboarding">Onboarding</a>
+      <a href="/docs?page=architecture">Architecture</a>
+      <a href="/docs?page=user-module">User Module</a>
+      <a href="/swagger/" target="_blank">Swagger UI ↗</a>
+    </nav>
+  </header>
+
+  <div class="docs-container">
+    <aside class="docs-sidebar">
+      <h4>Core Docs</h4>
+      <ul>
+        <li><a href="/docs?page=onboarding">Onboarding Guide</a></li>
+        <li><a href="/docs?page=architecture">Architecture Reference</a></li>
+      </ul>
+      <h4>Guides</h4>
+      <ul>
+        <li><a href="/docs?page=external-client-integration">Client Integration</a></li>
+        <li><a href="/docs?page=error-builder">Error Handling</a></li>
+      </ul>
+      <h4>Modules</h4>
+      <ul>
+        <li><a href="/docs?page=user-module">User Module</a></li>
+      </ul>
+      <h4>Templates</h4>
+      <ul>
+        <li><a href="/docs?page=feature-template">Feature Template</a></li>
+        <li><a href="/docs?page=guide-template">Guide Template</a></li>
+        <li><a href="/docs?page=swagger-description-template">Swagger Template</a></li>
+      </ul>
+    </aside>
+
+    <main class="docs-main">
+      <a class="back-link" href="/docs">← Back to Documentation Home</a>
+
+      <div class="toc-box">
+  <div class="toc-title">Table of Contents</div>
+  <ul class="toc-list">
+    <li><a href="#related-documentation">Related Documentation</a></li>
+    <li><a href="#authentication-flow-overview">Authentication Flow Overview</a></li>
+    <li><a href="#api-endpoint-reference">API Endpoint Reference</a></li>
+    <li><a href="#1-register-user">&nbsp;&nbsp;↳ 1. Register User</a></li>
+    <li><a href="#2-user-login">&nbsp;&nbsp;↳ 2. User Login</a></li>
+    <li><a href="#3-get-user-profile-protected">&nbsp;&nbsp;↳ 3. Get User Profile (Protected)</a></li>
+  </ul>
+</div>
+
+      <h1>External Client Integration Guide</h1>
+<p>&lt;!-- metadata</p>
+<p>title: External Client Integration Guide</p>
+<p>category: Guides</p>
+<p>status: active</p>
+<p>last_updated: 2026-08-15</p>
+<p>--&gt;</p>
+<p>This guide provides integration instructions for frontend applications (React, Next.js, Vue), mobile apps (iOS, Android, Flutter), and external API clients consuming the <strong>go-ddd</strong> API.</p>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+  <li><a href="/docs?page=user-module">User Management Module</a></li>
+  <li><a href="/docs?page=error-builder">Error Builder &amp; Handling Guide</a></li>
+  <li><a href="/docs?page=architecture">Architecture Reference</a></li>
+</ul>
+<hr>
+<h2 id="authentication-flow-overview">Authentication Flow Overview</h2>
+<div class="doc-comment">&lt;!-- covers: internal/presentation/http/user_handler.go, internal/infrastructure/security/jwt.go --&gt;</div>
+<p>The API uses <strong>JWT (JSON Web Tokens)</strong> for stateless authentication.</p>
+<ol>
+  <li><strong>Register</strong>: Send user credentials (<code>name</code>, <code>email</code>, <code>password</code>) to POST <code>/api/v1/auth/register</code>.</li>
+  <li><strong>Login</strong>: Send email and password to POST <code>/api/v1/auth/login</code> to receive a Bearer JWT token.</li>
+  <li><strong>Authenticated Requests</strong>: Include the header <code>Authorization: Bearer &lt;token&gt;</code> on protected routes such as GET <code>/api/v1/users/me</code>.</li>
+</ol>
+<hr>
+<h2 id="api-endpoint-reference">API Endpoint Reference</h2>
+<h3 id="1-register-user">1. Register User</h3>
+<p><strong>Endpoint</strong>: <code>POST /api/v1/auth/register</code>  </p>
+<p><strong>Content-Type</strong>: <code>application/json</code></p>
+<p><strong>Request Body</strong>:</p>
+<pre><code class="language-json">{
+  &#34;name&#34;: &#34;Jane Doe&#34;,
+  &#34;email&#34;: &#34;jane@example.com&#34;,
+  &#34;password&#34;: &#34;SecretPassword123!&#34;
+}
+</code></pre>
+<p><strong>Response (201 Created)</strong>:</p>
+<pre><code class="language-json">{
+  &#34;id&#34;: 1,
+  &#34;name&#34;: &#34;Jane Doe&#34;,
+  &#34;email&#34;: &#34;jane@example.com&#34;,
+  &#34;created_at&#34;: &#34;2026-08-15T12:00:00Z&#34;
+}
+</code></pre>
+<hr>
+<h3 id="2-user-login">2. User Login</h3>
+<p><strong>Endpoint</strong>: <code>POST /api/v1/auth/login</code>  </p>
+<p><strong>Content-Type</strong>: <code>application/json</code></p>
+<p><strong>Request Body</strong>:</p>
+<pre><code class="language-json">{
+  &#34;email&#34;: &#34;jane@example.com&#34;,
+  &#34;password&#34;: &#34;SecretPassword123!&#34;
+}
+</code></pre>
+<p><strong>Response (200 OK)</strong>:</p>
+<pre><code class="language-json">{
+  &#34;token&#34;: &#34;eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...&#34;,
+  &#34;user&#34;: {
+    &#34;id&#34;: 1,
+    &#34;name&#34;: &#34;Jane Doe&#34;,
+    &#34;email&#34;: &#34;jane@example.com&#34;
+  }
+}
+</code></pre>
+<hr>
+<h3 id="3-get-user-profile-protected">3. Get User Profile (Protected)</h3>
+<p><strong>Endpoint</strong>: <code>GET /api/v1/users/me</code>  </p>
+<p><strong>Headers</strong>: <code>Authorization: Bearer &lt;JWT_TOKEN&gt;</code></p>
+<p><strong>Response (200 OK)</strong>:</p>
+<pre><code class="language-json">{
+  &#34;id&#34;: 1,
+  &#34;name&#34;: &#34;Jane Doe&#34;,
+  &#34;email&#34;: &#34;jane@example.com&#34;,
+  &#34;created_at&#34;: &#34;2026-08-15T12:00:00Z&#34;
+}
+</code></pre>
+<p><strong>Response (401 Unauthorized)</strong>:</p>
+<pre><code class="language-json">{
+  &#34;error&#34;: &#34;Unauthorized - Invalid or missing token&#34;
+}
+</code></pre>
+
+    </main>
+  </div>
+
+  <footer class="docs-footer">
+    <p>&copy; 2026 go-ddd Team. Markdown-first Documentation Architecture.</p>
+  </footer>
+</body>
+</html>
