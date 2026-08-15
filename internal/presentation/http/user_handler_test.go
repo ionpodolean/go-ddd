@@ -54,7 +54,7 @@ func (m *mockUserRepository) ExistsByEmail(ctx context.Context, email string) (b
 func TestHTTPHandlersAndMiddleware(t *testing.T) {
 	repo := newMockUserRepository()
 	jwtSvc := infraSecurity.NewJWTService("test-secret-key", 1*time.Hour)
-	userSvc := appUser.NewUserService(repo, jwtSvc)
+	userSvc := appUser.NewUserService(repo, jwtSvc, nil)
 	userHandler := presentHTTP.NewUserHandler(userSvc)
 	router := presentHTTP.NewRouter(userHandler, jwtSvc)
 

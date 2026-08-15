@@ -1,5 +1,121 @@
 basePath: /
 definitions:
+  acl.AdminUserRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        type: string
+    type: object
+  acl.CreateDomainRequest:
+    properties:
+      admin:
+        $ref: '#/definitions/acl.AdminUserRequest'
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
+  acl.CreatePermissionRequest:
+    properties:
+      code:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  acl.CreateRoleRequest:
+    properties:
+      code:
+        type: string
+      description:
+        type: string
+      domain_id:
+        type: integer
+      name:
+        type: string
+      permission_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  acl.Domain:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      slug:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  acl.Permission:
+    properties:
+      code:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  acl.Role:
+    properties:
+      code:
+        type: string
+      description:
+        type: string
+      domain_id:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      permission_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  acl.UpdateDomainRequest:
+    properties:
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
+  acl.UpdatePermissionRequest:
+    properties:
+      code:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  acl.UpdateRoleRequest:
+    properties:
+      code:
+        type: string
+      description:
+        type: string
+      domain_id:
+        type: integer
+      name:
+        type: string
+      permission_ids:
+        items:
+          type: integer
+        type: array
+    type: object
   user.AuthResponse:
     properties:
       token:
@@ -52,6 +168,314 @@ info:
   title: Go DDD API
   version: "1.0"
 paths:
+  /api/v1/acl/domains:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/acl.Domain'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List domains
+      tags:
+      - ACL Domains
+    post:
+      consumes:
+      - application/json
+      description: Creates the domain, its Admin role, an administrator user, membership,
+        and role assignment in one transaction.
+      parameters:
+      - description: Domain and initial administrator
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/acl.CreateDomainRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/acl.Domain'
+      security:
+      - BearerAuth: []
+      summary: Create a domain and its administrator
+      tags:
+      - ACL Domains
+  /api/v1/acl/domains/{id}:
+    delete:
+      parameters:
+      - description: Domain ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a domain
+      tags:
+      - ACL Domains
+    get:
+      parameters:
+      - description: Domain ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/acl.Domain'
+      security:
+      - BearerAuth: []
+      summary: Get a domain
+      tags:
+      - ACL Domains
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Domain ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Domain
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/acl.UpdateDomainRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/acl.Domain'
+      security:
+      - BearerAuth: []
+      summary: Update a domain
+      tags:
+      - ACL Domains
+  /api/v1/acl/permissions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/acl.Permission'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List permissions
+      tags:
+      - ACL Permissions
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Permission
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/acl.CreatePermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/acl.Permission'
+      security:
+      - BearerAuth: []
+      summary: Create a permission
+      tags:
+      - ACL Permissions
+  /api/v1/acl/permissions/{id}:
+    delete:
+      parameters:
+      - description: Permission ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a permission
+      tags:
+      - ACL Permissions
+    get:
+      parameters:
+      - description: Permission ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/acl.Permission'
+      security:
+      - BearerAuth: []
+      summary: Get a permission
+      tags:
+      - ACL Permissions
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Permission ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Permission
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/acl.UpdatePermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/acl.Permission'
+      security:
+      - BearerAuth: []
+      summary: Update a permission
+      tags:
+      - ACL Permissions
+  /api/v1/acl/roles:
+    get:
+      parameters:
+      - description: Domain ID
+        in: query
+        name: domain_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/acl.Role'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List roles in a domain
+      tags:
+      - ACL Roles
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/acl.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/acl.Role'
+      security:
+      - BearerAuth: []
+      summary: Create a domain-scoped role
+      tags:
+      - ACL Roles
+  /api/v1/acl/roles/{id}:
+    delete:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Delete a role
+      tags:
+      - ACL Roles
+    get:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/acl.Role'
+      security:
+      - BearerAuth: []
+      summary: Get a role
+      tags:
+      - ACL Roles
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Role
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/acl.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/acl.Role'
+      security:
+      - BearerAuth: []
+      summary: Update a role
+      tags:
+      - ACL Roles
   /api/v1/auth/login:
     post:
       consumes:

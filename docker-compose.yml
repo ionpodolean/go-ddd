@@ -14,9 +14,21 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - DB_NAME=${DB_NAME:-data}
       - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key}
+      - AUTH_ADMIN_EMAIL=${AUTH_ADMIN_EMAIL:-auth-admin@example.com}
+      - AUTH_ADMIN_PASSWORD=${AUTH_ADMIN_PASSWORD:-change-me-now}
+      - AUTH_ADMIN_FIRST_NAME=${AUTH_ADMIN_FIRST_NAME:-Auth}
+      - AUTH_ADMIN_LAST_NAME=${AUTH_ADMIN_LAST_NAME:-Admin}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+      - OTEL_SERVICE_NAME=go-ddd-service
+      - OTEL_SERVICE_VERSION=1.0.0
+      - ENVIRONMENT=development
+      - LOG_LEVEL=info
+      - LOG_PRETTY=false
     depends_on:
       db:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     networks:
       - go-networks
     command: /bin/sh -c "go mod download && go build -o main ./cmd/main.go && ./main"
@@ -52,8 +64,95 @@ services:
     depends_on:
       - db
 
+  # ==========================================
+  # Observability Stack
+  # ==========================================
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./deployments/observability/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Prometheus exporter
+    networks:
+      - go-networks
+    depends_on:
+      - tempo
+      - loki
+
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-remote-write-receiver"
+      - "--enable-feature=exemplar-storage"
+    volumes:
+      - ./deployments/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - go-networks
+    depends_on:
+      - otel-collector
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./deployments/observability/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP API
+      - "9095:9095"   # Tempo gRPC
+    networks:
+      - go-networks
+
+  loki:
+    image: grafana/loki:latest
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+      - ./deployments/observability/loki-config.yaml:/etc/loki/config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - go-networks
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    volumes:
+      - ./deployments/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deployments/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - go-networks
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+
 volumes:
   go_mysql_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  tempo_data:
+    driver: local
+  loki_data:
+    driver: local
+  grafana_data:
     driver: local
 
 networks:

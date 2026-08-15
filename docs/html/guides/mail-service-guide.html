@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mail Service Integration Guide - Go DDD Docs</title>
+  <link rel="stylesheet" href="/docs/assets/docs.css">
+</head>
+<body>
+  <header class="docs-header">
+    <a href="/docs" class="docs-brand">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <span>go-ddd Docs</span>
+    </a>
+    <nav class="docs-nav">
+      <a href="/docs" >Home</a>
+      <a href="/docs?page=onboarding">Onboarding</a>
+      <a href="/docs?page=architecture">Architecture</a>
+      <a href="/docs?page=user-module">User Module</a>
+      <a href="/swagger/" target="_blank">Swagger UI ↗</a>
+    </nav>
+  </header>
+
+  <div class="docs-container">
+    <aside class="docs-sidebar">
+      <h4>Core Docs</h4>
+      <ul>
+        <li><a href="/docs?page=onboarding">Onboarding Guide</a></li>
+        <li><a href="/docs?page=architecture">Architecture Reference</a></li>
+      </ul>
+      <h4>Guides</h4>
+      <ul>
+        <li><a href="/docs?page=external-client-integration">Client Integration</a></li>
+        <li><a href="/docs?page=error-builder">Error Handling</a></li>
+      </ul>
+      <h4>Modules</h4>
+      <ul>
+        <li><a href="/docs?page=user-module">User Module</a></li>
+      </ul>
+      <h4>Templates</h4>
+      <ul>
+        <li><a href="/docs?page=feature-template">Feature Template</a></li>
+        <li><a href="/docs?page=guide-template">Guide Template</a></li>
+        <li><a href="/docs?page=swagger-description-template">Swagger Template</a></li>
+      </ul>
+    </aside>
+
+    <main class="docs-main">
+      <a class="back-link" href="/docs">← Back to Documentation Home</a>
+
+      <div class="toc-box">
+  <div class="toc-title">Table of Contents</div>
+  <ul class="toc-list">
+    <li><a href="#related-documentation">Related Documentation</a></li>
+    <li><a href="#architecture-overview">Architecture Overview</a></li>
+    <li><a href="#driver-configuration-env">Driver Configuration (`.env`)</a></li>
+    <li><a href="#1-smtp-driver-mailtrap-sandbox-or-production-smtp">&nbsp;&nbsp;↳ 1. SMTP Driver (Mailtrap Sandbox or Production SMTP)</a></li>
+    <li><a href="#2-mailtrap-api-driver-http-sending-api">&nbsp;&nbsp;↳ 2. Mailtrap API Driver (HTTP Sending API)</a></li>
+    <li><a href="#3-log-driver-development-testing">&nbsp;&nbsp;↳ 3. Log Driver (Development &amp; Testing)</a></li>
+    <li><a href="#code-example-sending-emails">Code Example: Sending Emails</a></li>
+  </ul>
+</div>
+
+      <h1>Mail Service Integration Guide</h1>
+<p>&lt;!-- metadata</p>
+<p>title: Mail Service Integration Guide</p>
+<p>category: Guides</p>
+<p>status: active</p>
+<p>last_updated: 2026-08-15</p>
+<p>--&gt;</p>
+<p>This guide describes the Mail Service architecture in <strong>go-ddd</strong>, supporting <strong>SMTP</strong>, <strong>Mailtrap API</strong>, and local <strong>Log</strong> drivers.</p>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+  <li><a href="/docs?page=architecture">Architecture Reference</a></li>
+  <li><a href="/docs?page=user-module">User Management Module</a></li>
+  <li><a href="/docs?page=external-client-integration">External Client Integration Guide</a></li>
+</ul>
+<hr>
+<h2 id="architecture-overview">Architecture Overview</h2>
+<div class="doc-comment">&lt;!-- covers: internal/domain/mail/**, internal/infrastructure/mail/** --&gt;</div>
+<p>The Mail Service implements the DDD Strategy pattern. The domain defines a generic <code>Mailer</code> interface, allowing drivers to be swapped dynamically via environment variables without changing business logic.</p>
+<pre><code class="language-">                  +-------------------------+
+                  |  domain/mail.Mailer     |
+                  |  (Send method interface)|
+                  +-------------------------+
+                               ^
+                               |
+        +----------------------+----------------------+
+        |                      |                      |
++---------------+      +---------------+      +---------------+
+|  SMTPMailer   |      | MailtrapAPI   |      |   LogMailer   |
+|  (net/smtp)   |      |  (HTTP API)   |      | (stdout dev)  |
++---------------+      +---------------+      +---------------+
+</code></pre>
+<hr>
+<h2 id="driver-configuration-env">Driver Configuration (<code>.env</code>)</h2>
+<p>Choose the driver using <code>MAIL_DRIVER</code>:</p>
+<h3 id="1-smtp-driver-mailtrap-sandbox-or-production-smtp">1. SMTP Driver (Mailtrap Sandbox or Production SMTP)</h3>
+<pre><code class="language-env">MAIL_DRIVER=smtp
+MAIL_HOST=sandbox.smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=your_smtp_username
+MAIL_PASSWORD=your_smtp_password
+MAIL_FROM_ADDRESS=noreply@example.com
+MAIL_FROM_NAME=&#34;Go-DDD App&#34;
+</code></pre>
+<h3 id="2-mailtrap-api-driver-http-sending-api">2. Mailtrap API Driver (HTTP Sending API)</h3>
+<pre><code class="language-env">MAIL_DRIVER=api
+MAIL_API_TOKEN=your_mailtrap_api_token
+MAIL_FROM_ADDRESS=noreply@example.com
+MAIL_FROM_NAME=&#34;Go-DDD App&#34;
+</code></pre>
+<h3 id="3-log-driver-development-testing">3. Log Driver (Development &amp; Testing)</h3>
+<p>Logs emails to stdout without sending external network requests:</p>
+<pre><code class="language-env">MAIL_DRIVER=log
+</code></pre>
+<hr>
+<h2 id="code-example-sending-emails">Code Example: Sending Emails</h2>
+<pre><code class="language-go">package example
+
+import (
+    &#34;context&#34;
+    domainMail &#34;go-ddd/internal/domain/mail&#34;
+)
+
+func SendWelcome(ctx context.Context, mailer domainMail.Mailer, userEmail, userName string) error {
+    msg := domainMail.Message{
+        From:    domainMail.Address{Name: &#34;Go-DDD Team&#34;, Email: &#34;noreply@example.com&#34;},
+        To:      []domainMail.Address{{Name: userName, Email: userEmail}},
+        Subject: &#34;Welcome to Go-DDD&#34;,
+        TextBody: &#34;Welcome to our application!&#34;,
+        HTMLBody: &#34;&lt;h1&gt;Welcome to our application!&lt;/h1&gt;&#34;,
+    }
+    return mailer.Send(ctx, msg)
+}
+</code></pre>
+
+    </main>
+  </div>
+
+  <footer class="docs-footer">
+    <p>&copy; 2026 go-ddd Team. Markdown-first Documentation Architecture.</p>
+  </footer>
+</body>
+</html>

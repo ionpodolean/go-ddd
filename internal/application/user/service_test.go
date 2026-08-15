@@ -55,7 +55,7 @@ func (m *mockTokenService) GenerateToken(userID int64, email string) (string, er
 func TestUserService_RegisterAndLogin(t *testing.T) {
 	repo := newMockUserRepository()
 	tokenSvc := &mockTokenService{}
-	svc := appUser.NewUserService(repo, tokenSvc)
+	svc := appUser.NewUserService(repo, tokenSvc, nil)
 	ctx := context.Background()
 
 	t.Run("register new user successfully", func(t *testing.T) {

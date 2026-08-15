@@ -2,7 +2,10 @@ package user
 
 import (
 	"context"
+	"fmt"
+	"log"
 
+	domainMail "go-ddd/internal/domain/mail"
 	domainUser "go-ddd/internal/domain/user"
 )
 
@@ -13,12 +16,14 @@ type TokenService interface {
 type UserService struct {
 	userRepo     domainUser.UserRepository
 	tokenService TokenService
+	mailer       domainMail.Mailer
 }
 
-func NewUserService(userRepo domainUser.UserRepository, tokenService TokenService) *UserService {
+func NewUserService(userRepo domainUser.UserRepository, tokenService TokenService, mailer domainMail.Mailer) *UserService {
 	return &UserService{
 		userRepo:     userRepo,
 		tokenService: tokenService,
+		mailer:       mailer,
 	}
 }
 
@@ -43,6 +48,21 @@ func (s *UserService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 	token, err := s.tokenService.GenerateToken(newUser.ID, newUser.Email)
 	if err != nil {
 		return nil, err
+	}
+
+	// Send welcome email asynchronously
+	if s.mailer != nil {
+		go func(toEmail, firstName string) {
+			msg := domainMail.Message{
+				To:       []domainMail.Address{{Name: firstName, Email: toEmail}},
+				Subject:  "Welcome to Go-DDD App!",
+				TextBody: fmt.Sprintf("Hello %s,\n\nWelcome to Go-DDD API Application!", firstName),
+				HTMLBody: fmt.Sprintf("<h1>Welcome %s!</h1><p>Thank you for registering on Go-DDD API Application.</p>", firstName),
+			}
+			if err := s.mailer.Send(context.Background(), msg); err != nil {
+				log.Printf("Failed to send welcome email to %s: %v", toEmail, err)
+			}
+		}(newUser.Email, newUser.FirstName)
 	}
 
 	return &AuthResponse{

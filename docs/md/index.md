@@ -15,6 +15,8 @@ Welcome to the technical documentation system for **go-ddd** — a clean Domain-
   Complete guide for frontend, mobile, and third-party API clients interacting with registration, login, and JWT protected routes.
 - **[Error Builder & Handling Guide](/docs?page=error-builder)**
   Domain error definitions, error mapping to HTTP status codes, and unified JSON error payload structure.
+- **[Mail Service Integration Guide](/docs?page=mail-service)**
+  Email service setup, SMTP configuration, Mailtrap API driver, and background mail dispatching.
 
 ### Domain Modules
 - **[User Management Module](/docs?page=user-module)**

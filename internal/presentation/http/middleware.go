@@ -2,12 +2,13 @@ package http
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strings"
-	"time"
+
+	"github.com/rs/zerolog/log"
 
 	infraSecurity "go-ddd/internal/infrastructure/security"
+	"go-ddd/pkg/telemetry"
 )
 
 type contextKey string
@@ -17,32 +18,16 @@ const (
 	EmailKey  contextKey = "email"
 )
 
-type responseWriterWrapper struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-func (rw *responseWriterWrapper) WriteHeader(code int) {
-	rw.statusCode = code
-	rw.ResponseWriter.WriteHeader(code)
-}
-
-func LoggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		wrapper := &responseWriterWrapper{ResponseWriter: w, statusCode: http.StatusOK}
-
-		next.ServeHTTP(wrapper, r)
-
-		log.Printf("[%s] %s - %d (%s)", r.Method, r.URL.Path, wrapper.statusCode, time.Since(start))
-	})
-}
-
 func RecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("[PANIC RECOVERED] %v", err)
+				logger := telemetry.Logger(r.Context())
+				logger.Error().
+					Interface("panic", err).
+					Str("method", r.Method).
+					Str("path", r.URL.Path).
+					Msg("Panic recovered")
 				respondError(w, http.StatusInternalServerError, "internal server error")
 			}
 		}()
@@ -67,6 +52,7 @@ func AuthMiddleware(jwtService *infraSecurity.JWTService) func(http.Handler) htt
 
 			claims, err := jwtService.ValidateToken(parts[1])
 			if err != nil {
+				log.Warn().Err(err).Str("path", r.URL.Path).Msg("Invalid or expired token")
 				respondError(w, http.StatusUnauthorized, "invalid or expired token")
 				return
 			}
