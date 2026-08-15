@@ -21,8 +21,8 @@ COPY . .
 # Build the Go app
 RUN go build -o main ./cmd/main.go
 
-# Expose port 8080 to the outside world
-EXPOSE 8080
+# Expose HTTP and gRPC ports to the outside world
+EXPOSE 8080 9090
 
 # Command to run the executable
 CMD ["./main"]

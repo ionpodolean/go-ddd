@@ -32,6 +32,9 @@ var (
 	HTTPRequestsTotal          metric.Int64Counter
 	HTTPRequestDurationSeconds metric.Float64Histogram
 	HTTPActiveRequests         metric.Int64UpDownCounter
+	GRPCRequestsTotal          metric.Int64Counter
+	GRPCRequestDurationSeconds metric.Float64Histogram
+	GRPCActiveRequests         metric.Int64UpDownCounter
 
 	once sync.Once
 )
@@ -178,6 +181,31 @@ func initMetrics() error {
 	HTTPActiveRequests, err = meter.Int64UpDownCounter(
 		"http_active_requests",
 		metric.WithDescription("Number of active HTTP requests currently being processed"),
+	)
+	if err != nil {
+		return err
+	}
+
+	GRPCRequestsTotal, err = meter.Int64Counter(
+		"grpc_server_requests_total",
+		metric.WithDescription("Total number of gRPC requests processed"),
+	)
+	if err != nil {
+		return err
+	}
+
+	GRPCRequestDurationSeconds, err = meter.Float64Histogram(
+		"grpc_server_request_duration_seconds",
+		metric.WithDescription("gRPC request duration in seconds"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		return err
+	}
+
+	GRPCActiveRequests, err = meter.Int64UpDownCounter(
+		"grpc_server_active_requests",
+		metric.WithDescription("Number of active gRPC requests currently being processed"),
 	)
 	if err != nil {
 		return err

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,6 +19,7 @@ import (
 	infraMail "go-ddd/internal/infrastructure/mail"
 	infraPersistence "go-ddd/internal/infrastructure/persistence"
 	infraSecurity "go-ddd/internal/infrastructure/security"
+	presentGRPC "go-ddd/internal/presentation/grpc"
 	presentHTTP "go-ddd/internal/presentation/http"
 	"go-ddd/pkg/db"
 	"go-ddd/pkg/telemetry"
@@ -97,10 +99,19 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+	grpcPort := os.Getenv("GRPC_PORT")
+	if grpcPort == "" {
+		grpcPort = "9090"
+	}
 
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: router,
+	}
+	grpcServer := presentGRPC.NewServer(userService, jwtService)
+	grpcListener, err := net.Listen("tcp", ":"+grpcPort)
+	if err != nil {
+		log.Fatal().Err(err).Str("port", grpcPort).Msg("Failed to listen for gRPC server")
 	}
 
 	// Start server in a background goroutine
@@ -110,12 +121,18 @@ func main() {
 			log.Fatal().Err(err).Msg("Server ListenAndServe error")
 		}
 	}()
+	go func() {
+		log.Info().Str("port", grpcPort).Msg("gRPC server starting")
+		if err := grpcServer.Serve(grpcListener); err != nil {
+			log.Error().Err(err).Msg("gRPC server error")
+		}
+	}()
 
 	// Listen for OS interrupt signals (SIGINT, SIGTERM)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Info().Msg("Received shutdown signal. Gracefully shutting down HTTP server...")
+	log.Info().Msg("Received shutdown signal. Gracefully shutting down servers...")
 
 	// Give active connections up to 5 seconds to complete
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -123,6 +140,17 @@ func main() {
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Fatal().Err(err).Msg("Server forced to shutdown")
+	}
+
+	grpcStopped := make(chan struct{})
+	go func() {
+		grpcServer.GracefulStop()
+		close(grpcStopped)
+	}()
+	select {
+	case <-grpcStopped:
+	case <-shutdownCtx.Done():
+		grpcServer.Stop()
 	}
 
 	log.Info().Msg("Server shutdown complete")

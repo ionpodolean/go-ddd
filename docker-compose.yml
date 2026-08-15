@@ -5,6 +5,7 @@ services:
       context: .
     ports:
       - "8080:8080"
+      - "9090:9090"
     volumes:
       - ./:/app:delegated
     environment:
@@ -14,6 +15,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - DB_NAME=${DB_NAME:-data}
       - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key}
+      - GRPC_PORT=${GRPC_PORT:-9090}
       - AUTH_ADMIN_EMAIL=${AUTH_ADMIN_EMAIL:-auth-admin@example.com}
       - AUTH_ADMIN_PASSWORD=${AUTH_ADMIN_PASSWORD:-change-me-now}
       - AUTH_ADMIN_FIRST_NAME=${AUTH_ADMIN_FIRST_NAME:-Auth}
