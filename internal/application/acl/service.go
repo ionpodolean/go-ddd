@@ -44,6 +44,13 @@ func (s *Service) GetDomain(ctx context.Context, id int64) (*domainACL.Domain, e
 }
 
 func (s *Service) UpdateDomain(ctx context.Context, id int64, req UpdateDomainRequest) (*domainACL.Domain, error) {
+	current, err := s.repo.GetDomain(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if current.Slug == "auth" {
+		return nil, domainACL.ErrForbidden
+	}
 	domain, err := domainACL.NewDomain(req.Name, req.Slug)
 	if err != nil {
 		return nil, err
@@ -56,6 +63,13 @@ func (s *Service) UpdateDomain(ctx context.Context, id int64, req UpdateDomainRe
 }
 
 func (s *Service) DeleteDomain(ctx context.Context, id int64) error {
+	domain, err := s.repo.GetDomain(ctx, id)
+	if err != nil {
+		return err
+	}
+	if domain.Slug == "auth" {
+		return domainACL.ErrForbidden
+	}
 	return s.repo.DeleteDomain(ctx, id)
 }
 
@@ -63,6 +77,9 @@ func (s *Service) CreateRole(ctx context.Context, req CreateRoleRequest) (*domai
 	role, err := domainACL.NewRole(req.DomainID, req.Name, req.Code, req.Description, req.PermissionIDs)
 	if err != nil {
 		return nil, err
+	}
+	if role.Code == "admin" {
+		return nil, domainACL.ErrForbidden
 	}
 	if err := s.repo.CreateRole(ctx, role); err != nil {
 		return nil, err
@@ -85,9 +102,15 @@ func (s *Service) UpdateRole(ctx context.Context, id int64, req UpdateRoleReques
 	if req.DomainID == 0 {
 		req.DomainID = current.DomainID
 	}
+	if current.Code == "admin" || req.DomainID != current.DomainID {
+		return nil, domainACL.ErrForbidden
+	}
 	role, err := domainACL.NewRole(req.DomainID, req.Name, req.Code, req.Description, req.PermissionIDs)
 	if err != nil {
 		return nil, err
+	}
+	if role.Code == "admin" {
+		return nil, domainACL.ErrForbidden
 	}
 	role.ID = id
 	if err := s.repo.UpdateRole(ctx, role); err != nil {
@@ -96,7 +119,16 @@ func (s *Service) UpdateRole(ctx context.Context, id int64, req UpdateRoleReques
 	return s.repo.GetRole(ctx, id)
 }
 
-func (s *Service) DeleteRole(ctx context.Context, id int64) error { return s.repo.DeleteRole(ctx, id) }
+func (s *Service) DeleteRole(ctx context.Context, id int64) error {
+	role, err := s.repo.GetRole(ctx, id)
+	if err != nil {
+		return err
+	}
+	if role.Code == "admin" {
+		return domainACL.ErrForbidden
+	}
+	return s.repo.DeleteRole(ctx, id)
+}
 
 func (s *Service) CreatePermission(ctx context.Context, req CreatePermissionRequest) (*domainACL.Permission, error) {
 	permission, err := domainACL.NewPermission(req.Name, req.Code, req.Description)
@@ -133,4 +165,10 @@ func (s *Service) DeletePermission(ctx context.Context, id int64) error {
 }
 func (s *Service) IsAuthAdmin(ctx context.Context, userID int64) (bool, error) {
 	return s.repo.IsAuthAdmin(ctx, userID)
+}
+func (s *Service) IsDomainAdmin(ctx context.Context, userID, domainID int64) (bool, error) {
+	return s.repo.IsDomainAdmin(ctx, userID, domainID)
+}
+func (s *Service) ListAdminDomains(ctx context.Context, userID int64) ([]domainACL.Domain, error) {
+	return s.repo.ListAdminDomains(ctx, userID)
 }

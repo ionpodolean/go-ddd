@@ -8,18 +8,12 @@ import (
 	"github.com/pressly/goose/v3"
 )
 
-func RunMigrations(db *sql.DB) {
-	fmt.Println("Running migrations...")
-
-	migrationsDir := "./migrations"
-
+func RunMigrations(db *sql.DB) error {
 	if err := goose.SetDialect("mysql"); err != nil {
-		panic(err)
+		return fmt.Errorf("configure migrations: %w", err)
 	}
-
-	if err := goose.Up(db, migrationsDir); err != nil {
-		fmt.Printf("Failed to run migrations: %v", err)
+	if err := goose.Up(db, "./migrations"); err != nil {
+		return fmt.Errorf("run migrations: %w", err)
 	}
-
-	fmt.Println("Migrations completed")
+	return nil
 }

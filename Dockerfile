@@ -1,5 +1,5 @@
 # Use the official Golang image as a base image
-FROM golang:alpine
+FROM golang:1.27.3-alpine
 
 ENV GOTOOLCHAIN=auto
 

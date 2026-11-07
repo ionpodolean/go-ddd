@@ -39,7 +39,9 @@ cp example.env .env
 Ensure `.env` contains:
 ```env
 PORT=8080
-JWT_SECRET=super-secret-jwt-key
+JWT_SECRET=<random-secret-at-least-32-bytes>
+AUTH_ADMIN_EMAIL=<administrator-email>
+AUTH_ADMIN_PASSWORD=<administrator-password-at-least-12-bytes>
 DB_DSN=user:password@tcp(localhost:3306)/data?charset=utf8&parseTime=True&loc=Local
 ```
 

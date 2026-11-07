@@ -4,8 +4,8 @@ services:
       dockerfile: Dockerfile
       context: .
     ports:
-      - "8080:8080"
-      - "9090:9090"
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${GRPC_PORT:-9090}:${GRPC_PORT:-9090}"
     volumes:
       - ./:/app:delegated
     environment:
@@ -14,10 +14,11 @@ services:
       - DB_USER=${DB_USER:-user}
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - DB_NAME=${DB_NAME:-data}
-      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key}
+      - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in .env}
       - GRPC_PORT=${GRPC_PORT:-9090}
-      - AUTH_ADMIN_EMAIL=${AUTH_ADMIN_EMAIL:-auth-admin@example.com}
-      - AUTH_ADMIN_PASSWORD=${AUTH_ADMIN_PASSWORD:-change-me-now}
+      - BIND_ADDRESS=0.0.0.0
+      - AUTH_ADMIN_EMAIL=${AUTH_ADMIN_EMAIL:?Set AUTH_ADMIN_EMAIL in .env}
+      - AUTH_ADMIN_PASSWORD=${AUTH_ADMIN_PASSWORD:?Set AUTH_ADMIN_PASSWORD in .env}
       - AUTH_ADMIN_FIRST_NAME=${AUTH_ADMIN_FIRST_NAME:-Auth}
       - AUTH_ADMIN_LAST_NAME=${AUTH_ADMIN_LAST_NAME:-Admin}
       - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
@@ -46,7 +47,7 @@ services:
       SERVICE_TAGS: dev
       SERVICE_NAME: mysql
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     volumes:
       - go_mysql_data:/var/lib/mysql
     healthcheck:
@@ -60,7 +61,7 @@ services:
   adminer:
     image: adminer:latest
     ports:
-      - '${ADMINER_PORT:-8081}:8080'
+      - '127.0.0.1:${ADMINER_PORT:-8081}:8080'
     networks:
       - go-networks
     depends_on:
@@ -76,9 +77,9 @@ services:
     volumes:
       - ./deployments/observability/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
     ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
-      - "8889:8889"   # Prometheus exporter
+      - "127.0.0.1:4317:4317"   # OTLP gRPC
+      - "127.0.0.1:4318:4318"   # OTLP HTTP
+      - "127.0.0.1:8889:8889"   # Prometheus exporter
     networks:
       - go-networks
     depends_on:
@@ -96,7 +97,7 @@ services:
       - ./deployments/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     ports:
-      - "9090:9090"
+      - "127.0.0.1:${PROMETHEUS_PORT:-9091}:9090"
     networks:
       - go-networks
     depends_on:
@@ -109,8 +110,8 @@ services:
       - ./deployments/observability/tempo.yaml:/etc/tempo.yaml:ro
       - tempo_data:/var/tempo
     ports:
-      - "3200:3200"   # Tempo HTTP API
-      - "9095:9095"   # Tempo gRPC
+      - "127.0.0.1:3200:3200"   # Tempo HTTP API
+      - "127.0.0.1:9095:9095"   # Tempo gRPC
     networks:
       - go-networks
 
@@ -121,7 +122,7 @@ services:
       - ./deployments/observability/loki-config.yaml:/etc/loki/config.yaml:ro
       - loki_data:/loki
     ports:
-      - "3100:3100"
+      - "127.0.0.1:3100:3100"
     networks:
       - go-networks
 
@@ -137,7 +138,7 @@ services:
       - ./deployments/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana_data:/var/lib/grafana
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     networks:
       - go-networks
     depends_on:

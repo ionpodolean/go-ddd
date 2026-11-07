@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"fmt"
+	"html"
 	"log"
 
 	domainMail "go-ddd/internal/domain/mail"
@@ -57,7 +58,7 @@ func (s *UserService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 				To:       []domainMail.Address{{Name: firstName, Email: toEmail}},
 				Subject:  "Welcome to Go-DDD App!",
 				TextBody: fmt.Sprintf("Hello %s,\n\nWelcome to Go-DDD API Application!", firstName),
-				HTMLBody: fmt.Sprintf("<h1>Welcome %s!</h1><p>Thank you for registering on Go-DDD API Application.</p>", firstName),
+				HTMLBody: fmt.Sprintf("<h1>Welcome %s!</h1><p>Thank you for registering on Go-DDD API Application.</p>", html.EscapeString(firstName)),
 			}
 			if err := s.mailer.Send(context.Background(), msg); err != nil {
 				log.Printf("Failed to send welcome email to %s: %v", toEmail, err)

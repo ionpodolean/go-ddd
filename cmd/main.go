@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	infraMail "go-ddd/internal/infrastructure/mail"
 	infraPersistence "go-ddd/internal/infrastructure/persistence"
 	infraSecurity "go-ddd/internal/infrastructure/security"
+	"go-ddd/internal/presentation/authguard"
 	presentGRPC "go-ddd/internal/presentation/grpc"
 	presentHTTP "go-ddd/internal/presentation/http"
 	"go-ddd/pkg/db"
@@ -45,6 +47,10 @@ import (
 // @description Type "Bearer " followed by a space and JWT token.
 func main() {
 	ctx := context.Background()
+	jwtSecret, admin, err := securityConfig()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Invalid security configuration")
+	}
 
 	// Initialize telemetry (Zerolog + OpenTelemetry Traces & Metrics)
 	shutdownTelemetry, err := telemetry.InitTelemetry(ctx)
@@ -62,24 +68,17 @@ func main() {
 	dbSql := db.InitDB()
 	defer dbSql.Close()
 
-	db.RunMigrations(dbSql)
+	if err := db.RunMigrations(dbSql); err != nil {
+		log.Fatal().Err(err).Msg("Failed to run migrations")
+	}
 
 	userRepo := infraPersistence.NewMySQLUserRepository(dbSql)
 	aclRepo := infraPersistence.NewMySQLACLRepository(dbSql)
 	aclService := appACL.NewService(aclRepo)
-	if err := aclService.SeedAuth(ctx, appACL.AdminUserRequest{
-		Email:     envOrDefault("AUTH_ADMIN_EMAIL", "auth-admin@example.com"),
-		Password:  envOrDefault("AUTH_ADMIN_PASSWORD", "change-me-now"),
-		FirstName: envOrDefault("AUTH_ADMIN_FIRST_NAME", "Auth"),
-		LastName:  envOrDefault("AUTH_ADMIN_LAST_NAME", "Admin"),
-	}); err != nil {
+	if err := aclService.SeedAuth(ctx, admin); err != nil {
 		log.Fatal().Err(err).Msg("Failed to seed Auth ACL domain")
 	}
 
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		jwtSecret = "super-secret-jwt-key"
-	}
 	jwtService := infraSecurity.NewJWTService(jwtSecret, 24*time.Hour)
 
 	mailCfg := config.GetMailConfig()
@@ -93,7 +92,8 @@ func main() {
 	userHandler := presentHTTP.NewUserHandler(userService)
 	aclHandler := presentHTTP.NewACLHandler(aclService)
 
-	router := presentHTTP.NewRouter(userHandler, jwtService, aclHandler)
+	limiter := authguard.New()
+	router := presentHTTP.NewRouterWithLimiter(userHandler, jwtService, limiter, aclHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -104,12 +104,18 @@ func main() {
 		grpcPort = "9090"
 	}
 
+	bindAddress := envOrDefault("BIND_ADDRESS", "127.0.0.1")
 	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: router,
+		Addr:              net.JoinHostPort(bindAddress, port),
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
-	grpcServer := presentGRPC.NewServer(userService, jwtService)
-	grpcListener, err := net.Listen("tcp", ":"+grpcPort)
+	grpcServer := presentGRPC.NewServerWithLimiter(userService, jwtService, limiter)
+	grpcListener, err := net.Listen("tcp", net.JoinHostPort(bindAddress, grpcPort))
 	if err != nil {
 		log.Fatal().Err(err).Str("port", grpcPort).Msg("Failed to listen for gRPC server")
 	}
@@ -161,4 +167,21 @@ func envOrDefault(name, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func securityConfig() (string, appACL.AdminUserRequest, error) {
+	secret := os.Getenv("JWT_SECRET")
+	if len(secret) < 32 {
+		return "", appACL.AdminUserRequest{}, errors.New("JWT_SECRET must contain at least 32 bytes")
+	}
+	admin := appACL.AdminUserRequest{
+		Email:     strings.TrimSpace(os.Getenv("AUTH_ADMIN_EMAIL")),
+		Password:  os.Getenv("AUTH_ADMIN_PASSWORD"),
+		FirstName: envOrDefault("AUTH_ADMIN_FIRST_NAME", "Auth"),
+		LastName:  envOrDefault("AUTH_ADMIN_LAST_NAME", "Admin"),
+	}
+	if admin.Email == "" || len(admin.Password) < 12 || admin.Password == "change-me-now" {
+		return "", appACL.AdminUserRequest{}, errors.New("AUTH_ADMIN_EMAIL and an AUTH_ADMIN_PASSWORD of at least 12 bytes are required")
+	}
+	return secret, admin, nil
 }

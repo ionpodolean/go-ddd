@@ -3,6 +3,7 @@ package grpc_test
 import (
 	"context"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -138,6 +139,14 @@ func TestUserServiceErrorMapping(t *testing.T) {
 	missingCtx := metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+notFoundToken)
 	if _, err := client.GetProfile(missingCtx, &userv1.GetProfileRequest{}); status.Code(err) != codes.NotFound {
 		t.Errorf("missing GetProfile() code = %s, want %s", status.Code(err), codes.NotFound)
+	}
+}
+
+func TestRejectsOversizedMessage(t *testing.T) {
+	client, _, _ := newTestClient(t)
+	_, err := client.Login(context.Background(), &userv1.LoginRequest{Email: "user@example.com", Password: strings.Repeat("x", 65<<10)})
+	if got := status.Code(err); got != codes.ResourceExhausted {
+		t.Fatalf("oversized login code = %s, want ResourceExhausted", got)
 	}
 }
 

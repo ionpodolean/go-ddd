@@ -20,7 +20,7 @@ type JWTClaims struct {
 
 func NewJWTService(secretKey string, expiry time.Duration) *JWTService {
 	if secretKey == "" {
-		secretKey = "default-secret-key-change-in-prod"
+		panic("JWT secret must not be empty")
 	}
 	if expiry <= 0 {
 		expiry = 24 * time.Hour
@@ -51,14 +51,14 @@ func (s *JWTService) ValidateToken(tokenString string) (*JWTClaims, error) {
 			return nil, errors.New("unexpected signing method")
 		}
 		return []byte(s.secretKey), nil
-	})
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}), jwt.WithExpirationRequired())
 
 	if err != nil {
 		return nil, err
 	}
 
 	claims, ok := token.Claims.(*JWTClaims)
-	if !ok || !token.Valid {
+	if !ok || !token.Valid || claims.UserID <= 0 {
 		return nil, errors.New("invalid token")
 	}
 

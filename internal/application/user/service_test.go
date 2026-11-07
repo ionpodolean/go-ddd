@@ -2,9 +2,12 @@ package user_test
 
 import (
 	"context"
+	"strings"
 	"testing"
+	"time"
 
 	appUser "go-ddd/internal/application/user"
+	domainMail "go-ddd/internal/domain/mail"
 	domainUser "go-ddd/internal/domain/user"
 )
 
@@ -47,6 +50,30 @@ func (m *mockUserRepository) ExistsByEmail(ctx context.Context, email string) (b
 }
 
 type mockTokenService struct{}
+
+type captureMailer struct{ messages chan domainMail.Message }
+
+func (m captureMailer) Send(_ context.Context, msg domainMail.Message) error {
+	m.messages <- msg
+	return nil
+}
+
+func TestWelcomeEmailEscapesUserName(t *testing.T) {
+	mailer := captureMailer{messages: make(chan domainMail.Message, 1)}
+	svc := appUser.NewUserService(newMockUserRepository(), &mockTokenService{}, mailer)
+	_, err := svc.Register(context.Background(), appUser.RegisterRequest{Email: "x@example.com", Password: "password123", FirstName: "<img src=x>", LastName: "User"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case msg := <-mailer.messages:
+		if strings.Contains(msg.HTMLBody, "<img") || !strings.Contains(msg.HTMLBody, "&lt;img src=x&gt;") {
+			t.Fatalf("unsafe HTML body: %s", msg.HTMLBody)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("welcome message not sent")
+	}
+}
 
 func (m *mockTokenService) GenerateToken(userID int64, email string) (string, error) {
 	return "mock-jwt-token", nil

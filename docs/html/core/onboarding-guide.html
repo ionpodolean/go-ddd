@@ -95,7 +95,9 @@
 </code></pre>
 <p>Ensure <code>.env</code> contains:</p>
 <pre><code class="language-env">PORT=8080
-JWT_SECRET=super-secret-jwt-key
+JWT_SECRET=&lt;random-secret-at-least-32-bytes&gt;
+AUTH_ADMIN_EMAIL=&lt;administrator-email&gt;
+AUTH_ADMIN_PASSWORD=&lt;administrator-password-at-least-12-bytes&gt;
 DB_DSN=user:password@tcp(localhost:3306)/data?charset=utf8&amp;parseTime=True&amp;loc=Local
 </code></pre>
 <h3 id="2-start-mysql-container">2. Start MySQL Container</h3>
