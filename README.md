@@ -124,6 +124,10 @@ For the complete API contract, open Swagger UI after starting the application.
 
 ## Testing and development
 
+Pull requests targeting `test`, `stage`, or `main` run the `Go tests` check.
+The repository ruleset requires a pull request and a successful `Go tests`
+status check for these branches. The check also runs for merge queue entries.
+
 ```bash
 go test -v -race ./...
 ```
