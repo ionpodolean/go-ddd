@@ -24,4 +24,6 @@ type Repository interface {
 	UpdatePermission(ctx context.Context, permission *Permission) error
 	DeletePermission(ctx context.Context, id int64) error
 	IsAuthAdmin(ctx context.Context, userID int64) (bool, error)
+	IsDomainAdmin(ctx context.Context, userID, domainID int64) (bool, error)
+	ListAdminDomains(ctx context.Context, userID int64) ([]Domain, error)
 }

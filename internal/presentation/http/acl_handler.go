@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -34,6 +35,66 @@ func (h *ACLHandler) RequireAuthAdmin(next http.Handler) http.Handler {
 	})
 }
 
+func (h *ACLHandler) RequireAnyAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := r.Context().Value(UserIDKey).(int64)
+		if !ok {
+			respondError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		super, err := h.service.IsAuthAdmin(r.Context(), userID)
+		if err != nil {
+			respondACLServiceError(w, err)
+			return
+		}
+		if !super {
+			domains, err := h.service.ListAdminDomains(r.Context(), userID)
+			if err != nil {
+				respondACLServiceError(w, err)
+				return
+			}
+			if len(domains) == 0 {
+				respondError(w, http.StatusForbidden, domainACL.ErrForbidden.Error())
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (h *ACLHandler) allowDomain(w http.ResponseWriter, r *http.Request, domainID int64) bool {
+	userID, ok := r.Context().Value(UserIDKey).(int64)
+	if !ok {
+		respondError(w, http.StatusUnauthorized, "unauthorized")
+		return false
+	}
+	super, err := h.service.IsAuthAdmin(r.Context(), userID)
+	if err == nil && !super {
+		super, err = h.service.IsDomainAdmin(r.Context(), userID, domainID)
+	}
+	if err != nil {
+		respondACLServiceError(w, err)
+		return false
+	}
+	if !super {
+		respondError(w, http.StatusForbidden, domainACL.ErrForbidden.Error())
+		return false
+	}
+	return true
+}
+
+func (h *ACLHandler) allowRole(w http.ResponseWriter, r *http.Request, roleID int64) (*domainACL.Role, bool) {
+	role, err := h.service.GetRole(r.Context(), roleID)
+	if err != nil {
+		respondACLServiceError(w, err)
+		return nil, false
+	}
+	if !h.allowDomain(w, r, role.DomainID) {
+		return nil, false
+	}
+	return role, true
+}
+
 // ListDomains godoc
 // @Summary List domains
 // @Tags ACL Domains
@@ -42,7 +103,18 @@ func (h *ACLHandler) RequireAuthAdmin(next http.Handler) http.Handler {
 // @Success 200 {array} acl.Domain
 // @Router /api/v1/acl/domains [get]
 func (h *ACLHandler) ListDomains(w http.ResponseWriter, r *http.Request) {
-	domains, err := h.service.ListDomains(r.Context())
+	userID := r.Context().Value(UserIDKey).(int64)
+	super, err := h.service.IsAuthAdmin(r.Context(), userID)
+	if err != nil {
+		respondACLServiceError(w, err)
+		return
+	}
+	var domains []domainACL.Domain
+	if super {
+		domains, err = h.service.ListDomains(r.Context())
+	} else {
+		domains, err = h.service.ListAdminDomains(r.Context(), userID)
+	}
 	if err != nil {
 		respondACLServiceError(w, err)
 		return
@@ -86,6 +158,9 @@ func (h *ACLHandler) GetDomain(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !h.allowDomain(w, r, id) {
+		return
+	}
 	domain, err := h.service.GetDomain(r.Context(), id)
 	if err != nil {
 		respondACLServiceError(w, err)
@@ -107,6 +182,9 @@ func (h *ACLHandler) GetDomain(w http.ResponseWriter, r *http.Request) {
 func (h *ACLHandler) UpdateDomain(w http.ResponseWriter, r *http.Request) {
 	id, ok := requestID(w, r)
 	if !ok {
+		return
+	}
+	if !h.allowDomain(w, r, id) {
 		return
 	}
 	var req appACL.UpdateDomainRequest
@@ -154,6 +232,9 @@ func (h *ACLHandler) ListRoles(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "valid domain_id is required")
 		return
 	}
+	if !h.allowDomain(w, r, domainID) {
+		return
+	}
 	roles, err := h.service.ListRoles(r.Context(), domainID)
 	if err != nil {
 		respondACLServiceError(w, err)
@@ -174,6 +255,9 @@ func (h *ACLHandler) ListRoles(w http.ResponseWriter, r *http.Request) {
 func (h *ACLHandler) CreateRole(w http.ResponseWriter, r *http.Request) {
 	var req appACL.CreateRoleRequest
 	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if !h.allowDomain(w, r, req.DomainID) {
 		return
 	}
 	role, err := h.service.CreateRole(r.Context(), req)
@@ -197,9 +281,8 @@ func (h *ACLHandler) GetRole(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	role, err := h.service.GetRole(r.Context(), id)
-	if err != nil {
-		respondACLServiceError(w, err)
+	role, ok := h.allowRole(w, r, id)
+	if !ok {
 		return
 	}
 	respondJSON(w, http.StatusOK, role)
@@ -218,6 +301,9 @@ func (h *ACLHandler) GetRole(w http.ResponseWriter, r *http.Request) {
 func (h *ACLHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 	id, ok := requestID(w, r)
 	if !ok {
+		return
+	}
+	if _, ok := h.allowRole(w, r, id); !ok {
 		return
 	}
 	var req appACL.UpdateRoleRequest
@@ -242,6 +328,9 @@ func (h *ACLHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 func (h *ACLHandler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 	id, ok := requestID(w, r)
 	if !ok {
+		return
+	}
+	if _, ok := h.allowRole(w, r, id); !ok {
 		return
 	}
 	if err := h.service.DeleteRole(r.Context(), id); err != nil {
@@ -365,14 +454,26 @@ func requestID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	return id, true
 }
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
-	if err := json.NewDecoder(r.Body).Decode(target); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid request body")
-		return false
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(target)
+	if err == nil {
+		var extra any
+		if err = decoder.Decode(&extra); err == io.EOF {
+			return true
+		}
 	}
-	return true
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		respondError(w, http.StatusRequestEntityTooLarge, "request body too large")
+	} else {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+	}
+	return false
 }
 func respondACLServiceError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, domainACL.ErrForbidden):
+		respondError(w, http.StatusForbidden, err.Error())
 	case errors.Is(err, domainACL.ErrDomainNotFound), errors.Is(err, domainACL.ErrRoleNotFound), errors.Is(err, domainACL.ErrPermissionNotFound):
 		respondError(w, http.StatusNotFound, err.Error())
 	case errors.Is(err, domainACL.ErrInvalidDomain), errors.Is(err, domainACL.ErrInvalidRole), errors.Is(err, domainACL.ErrInvalidPermission):

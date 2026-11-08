@@ -34,7 +34,7 @@ func (r *MySQLACLRepository) SeedAuth(ctx context.Context, admin *domainUser.Use
 		if err != nil {
 			return err
 		}
-		return r.createAdministrator(ctx, tx, domainID, "Auth Admin", admin, true)
+		return r.createAdministrator(ctx, tx, domainID, "Auth Admin", admin)
 	})
 }
 
@@ -49,11 +49,11 @@ func (r *MySQLACLRepository) CreateDomainWithAdmin(ctx context.Context, domain *
 			return err
 		}
 		domain.ID = domainID
-		return r.createAdministrator(ctx, tx, domainID, "Admin", admin, false)
+		return r.createAdministrator(ctx, tx, domainID, "Admin", admin)
 	})
 }
 
-func (r *MySQLACLRepository) createAdministrator(ctx context.Context, tx *sql.Tx, domainID int64, roleName string, admin *domainUser.User, allowExistingUser bool) error {
+func (r *MySQLACLRepository) createAdministrator(ctx context.Context, tx *sql.Tx, domainID int64, roleName string, admin *domainUser.User) error {
 	roleResult, err := tx.ExecContext(ctx, `INSERT INTO roles (domain_id, name, code, description) VALUES (?, ?, 'admin', 'Full access within this domain')`, domainID, roleName)
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func (r *MySQLACLRepository) createAdministrator(ctx context.Context, tx *sql.Tx
 		}
 	}
 
-	userID, err := r.createUser(ctx, tx, admin, allowExistingUser)
+	userID, err := r.createUser(ctx, tx, admin)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func (r *MySQLACLRepository) ensureAdminPermissions(ctx context.Context, tx *sql
 	return ids, nil
 }
 
-func (r *MySQLACLRepository) createUser(ctx context.Context, tx *sql.Tx, user *domainUser.User, allowExisting bool) (int64, error) {
+func (r *MySQLACLRepository) createUser(ctx context.Context, tx *sql.Tx, user *domainUser.User) (int64, error) {
 	result, err := tx.ExecContext(ctx, `INSERT INTO users (email, password, first_name, last_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`, user.Email, user.Password, user.FirstName, user.LastName, user.CreatedAt, user.UpdatedAt)
 	if err == nil {
 		id, idErr := result.LastInsertId()
@@ -113,14 +113,7 @@ func (r *MySQLACLRepository) createUser(ctx context.Context, tx *sql.Tx, user *d
 		}
 		return id, idErr
 	}
-	if !allowExisting {
-		return 0, err
-	}
-	var id int64
-	if queryErr := tx.QueryRowContext(ctx, `SELECT id FROM users WHERE email = ?`, user.Email).Scan(&id); queryErr != nil {
-		return 0, err
-	}
-	return id, nil
+	return 0, err
 }
 
 func (r *MySQLACLRepository) ListDomains(ctx context.Context) ([]domainACL.Domain, error) {
@@ -153,15 +146,26 @@ func (r *MySQLACLRepository) GetDomain(ctx context.Context, id int64) (*domainAC
 }
 
 func (r *MySQLACLRepository) UpdateDomain(ctx context.Context, domain *domainACL.Domain) error {
-	result, err := r.db.ExecContext(ctx, `UPDATE domains SET name = ?, slug = ? WHERE id = ?`, domain.Name, domain.Slug, domain.ID)
+	result, err := r.db.ExecContext(ctx, `UPDATE domains SET name = ?, slug = ? WHERE id = ? AND slug <> 'auth'`, domain.Name, domain.Slug, domain.ID)
 	if err != nil {
 		return err
 	}
-	return notFoundIfNoRows(result, domainACL.ErrDomainNotFound)
+	affected, err := result.RowsAffected()
+	if err != nil || affected > 0 {
+		return err
+	}
+	var exists bool
+	if err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM domains WHERE id = ? AND slug <> 'auth')`, domain.ID).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return domainACL.ErrDomainNotFound
+	}
+	return nil
 }
 
 func (r *MySQLACLRepository) DeleteDomain(ctx context.Context, id int64) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM domains WHERE id = ?`, id)
+	result, err := r.db.ExecContext(ctx, `DELETE FROM domains WHERE id = ? AND slug <> 'auth'`, id)
 	if err != nil {
 		return err
 	}
@@ -219,11 +223,15 @@ func (r *MySQLACLRepository) GetRole(ctx context.Context, id int64) (*domainACL.
 
 func (r *MySQLACLRepository) UpdateRole(ctx context.Context, role *domainACL.Role) error {
 	return r.withTx(ctx, func(tx *sql.Tx) error {
-		result, err := tx.ExecContext(ctx, `UPDATE roles SET domain_id = ?, name = ?, code = ?, description = ? WHERE id = ?`, role.DomainID, role.Name, role.Code, nullableString(role.Description), role.ID)
+		var existingID int64
+		err := tx.QueryRowContext(ctx, `SELECT id FROM roles WHERE id = ? AND domain_id = ? AND code <> 'admin' FOR UPDATE`, role.ID, role.DomainID).Scan(&existingID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return domainACL.ErrRoleNotFound
+		}
 		if err != nil {
 			return err
 		}
-		if err := notFoundIfNoRows(result, domainACL.ErrRoleNotFound); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE roles SET name = ?, code = ?, description = ? WHERE id = ?`, role.Name, role.Code, nullableString(role.Description), role.ID); err != nil {
 			return err
 		}
 		return replaceRolePermissions(ctx, tx, role.ID, role.PermissionIDs)
@@ -231,7 +239,7 @@ func (r *MySQLACLRepository) UpdateRole(ctx context.Context, role *domainACL.Rol
 }
 
 func (r *MySQLACLRepository) DeleteRole(ctx context.Context, id int64) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM roles WHERE id = ?`, id)
+	result, err := r.db.ExecContext(ctx, `DELETE FROM roles WHERE id = ? AND code <> 'admin'`, id)
 	if err != nil {
 		return err
 	}
@@ -298,6 +306,37 @@ func (r *MySQLACLRepository) IsAuthAdmin(ctx context.Context, userID int64) (boo
         WHERE ur.user_id = ? AND d.slug = ? AND r.code = 'admin'
     )`, userID, authDomainSlug).Scan(&exists)
 	return exists == 1, err
+}
+
+func (r *MySQLACLRepository) IsDomainAdmin(ctx context.Context, userID, domainID int64) (bool, error) {
+	var exists bool
+	err := r.db.QueryRowContext(ctx, `SELECT EXISTS(
+		SELECT 1 FROM user_roles ur
+		JOIN roles r ON r.id = ur.role_id
+		JOIN user_domain ud ON ud.user_id = ur.user_id AND ud.domain_id = r.domain_id
+		WHERE ur.user_id = ? AND r.domain_id = ? AND r.code = 'admin'
+	)`, userID, domainID).Scan(&exists)
+	return exists, err
+}
+
+func (r *MySQLACLRepository) ListAdminDomains(ctx context.Context, userID int64) ([]domainACL.Domain, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT d.id, d.name, d.slug, d.created_at, d.updated_at
+		FROM domains d JOIN roles r ON r.domain_id = d.id AND r.code = 'admin'
+		JOIN user_roles ur ON ur.role_id = r.id AND ur.user_id = ?
+		JOIN user_domain ud ON ud.user_id = ur.user_id AND ud.domain_id = d.id ORDER BY d.id`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	domains := make([]domainACL.Domain, 0)
+	for rows.Next() {
+		var domain domainACL.Domain
+		if err := rows.Scan(&domain.ID, &domain.Name, &domain.Slug, &domain.CreatedAt, &domain.UpdatedAt); err != nil {
+			return nil, err
+		}
+		domains = append(domains, domain)
+	}
+	return domains, rows.Err()
 }
 
 type scanner interface{ Scan(...any) error }

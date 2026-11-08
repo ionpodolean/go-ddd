@@ -3,6 +3,7 @@ package mail
 import (
 	"context"
 	"fmt"
+	"net/mail"
 	"net/smtp"
 	"strings"
 
@@ -30,16 +31,18 @@ func (m *SMTPMailer) Send(ctx context.Context, msg domainMail.Message) error {
 	if fromName == "" {
 		fromName = m.cfg.FromName
 	}
+	if strings.ContainsAny(from+fromName+msg.Subject, "\r\n") {
+		return fmt.Errorf("smtp mailer: invalid header value")
+	}
 
 	var recipients []string
 	var toHeaderParts []string
 	for _, recipient := range msg.To {
-		recipients = append(recipients, recipient.Email)
-		if recipient.Name != "" {
-			toHeaderParts = append(toHeaderParts, fmt.Sprintf("%s <%s>", recipient.Name, recipient.Email))
-		} else {
-			toHeaderParts = append(toHeaderParts, recipient.Email)
+		if strings.ContainsAny(recipient.Name+recipient.Email, "\r\n") {
+			return fmt.Errorf("smtp mailer: invalid header value")
 		}
+		recipients = append(recipients, recipient.Email)
+		toHeaderParts = append(toHeaderParts, (&mail.Address{Name: recipient.Name, Address: recipient.Email}).String())
 	}
 
 	if len(recipients) == 0 {
@@ -48,7 +51,7 @@ func (m *SMTPMailer) Send(ctx context.Context, msg domainMail.Message) error {
 
 	// Prepare MIME email body
 	var bodyBuilder strings.Builder
-	bodyBuilder.WriteString(fmt.Sprintf("From: %s <%s>\r\n", fromName, from))
+	bodyBuilder.WriteString(fmt.Sprintf("From: %s\r\n", (&mail.Address{Name: fromName, Address: from}).String()))
 	bodyBuilder.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(toHeaderParts, ", ")))
 	bodyBuilder.WriteString(fmt.Sprintf("Subject: %s\r\n", msg.Subject))
 	bodyBuilder.WriteString("MIME-Version: 1.0\r\n")

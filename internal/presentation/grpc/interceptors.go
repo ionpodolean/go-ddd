@@ -5,15 +5,32 @@ import (
 	"strings"
 
 	infraSecurity "go-ddd/internal/infrastructure/security"
+	"go-ddd/internal/presentation/authguard"
 
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
 
 type claimsContextKey struct{}
+
+func RateLimitUnaryInterceptor(limiter *authguard.Limiter) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		if info.FullMethod == "/go_ddd.user.v1.UserService/Register" || info.FullMethod == "/go_ddd.user.v1.UserService/Login" {
+			address := "unknown"
+			if p, ok := peer.FromContext(ctx); ok && p.Addr != nil {
+				address = p.Addr.String()
+			}
+			if !limiter.Allow(address) {
+				return nil, status.Error(codes.ResourceExhausted, "too many authentication attempts")
+			}
+		}
+		return handler(ctx, req)
+	}
+}
 
 func userIDFromContext(ctx context.Context) (int64, bool) {
 	claims, ok := ctx.Value(claimsContextKey{}).(*infraSecurity.JWTClaims)

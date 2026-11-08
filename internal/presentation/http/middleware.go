@@ -8,8 +8,33 @@ import (
 	"github.com/rs/zerolog/log"
 
 	infraSecurity "go-ddd/internal/infrastructure/security"
+	"go-ddd/internal/presentation/authguard"
 	"go-ddd/pkg/telemetry"
 )
+
+const maxRequestBody = 64 << 10
+
+func limitBody(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ContentLength > maxRequestBody {
+			respondError(w, http.StatusRequestEntityTooLarge, "request body too large")
+			return
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBody)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func limitAuth(limiter *authguard.Limiter, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !limiter.Allow(r.RemoteAddr) {
+			w.Header().Set("Retry-After", "60")
+			respondError(w, http.StatusTooManyRequests, "too many authentication attempts")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 type contextKey string
 

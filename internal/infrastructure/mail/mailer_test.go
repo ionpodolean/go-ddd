@@ -28,6 +28,19 @@ func TestLogMailer_Send(t *testing.T) {
 	}
 }
 
+func TestSMTPMailerRejectsHeaderInjection(t *testing.T) {
+	mailer := NewSMTPMailer(config.MailConfig{FromAddress: "sender@example.com"})
+	for _, msg := range []domainMail.Message{
+		{To: []domainMail.Address{{Email: "user@example.com", Name: "User\r\nBcc: attacker@example.com"}}},
+		{To: []domainMail.Address{{Email: "user@example.com"}}, Subject: "hello\r\nBcc: attacker@example.com"},
+		{To: []domainMail.Address{{Email: "user@example.com"}}, From: domainMail.Address{Name: "Sender\r\nBcc: attacker@example.com"}},
+	} {
+		if err := mailer.Send(context.Background(), msg); err == nil || !strings.Contains(err.Error(), "invalid header value") {
+			t.Fatalf("header injection was not rejected: %v", err)
+		}
+	}
+}
+
 func TestMailtrapAPIMailer_Send(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
